@@ -40,6 +40,8 @@ public class RaceSentenceSpout implements IRichSpout {
     BlockingQueue<PaymentMessage> paymentMessagesQueue;
     ConcurrentSet<Long> taobaoOrderIdSet;
     ConcurrentSet<Long> tmallOrderIdSet;
+    long recvCount = 0;
+    long shootCount = 0;
     private static final String[] CHOICES = {"marry had a little lamb whos fleese was white as snow",
             "and every where that marry went the lamb was sure to go",
             "one two three four five six seven eight nine ten",
@@ -77,7 +79,7 @@ public class RaceSentenceSpout implements IRichSpout {
                         }
                         if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
                             PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
-                            LOG.info("get " + paymentMessage.toString());
+                            LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
                             try {
                                 paymentMessagesQueue.put(paymentMessage);
                             } catch (InterruptedException e) {
@@ -88,10 +90,10 @@ public class RaceSentenceSpout implements IRichSpout {
                             LOG.info("get " + orderMessage.toString());
                             if (msg.getTopic().equals(RaceConfig.MqTaobaoTradeTopic)) {
                                 taobaoOrderIdSet.add(orderMessage.getOrderId());
-                                LOG.info(orderMessage.getOrderId() + " is taobao id.");
+                                LOG.info(orderMessage.getOrderId() + " is taobao id." + ", count="+(recvCount++));
                             } else {
                                 tmallOrderIdSet.add(orderMessage.getOrderId());
-                                LOG.info(orderMessage.getOrderId() + " is tmall id.");
+                                LOG.info(orderMessage.getOrderId() + " is tmall id." + ", count="+(recvCount++));
                             }
                         }
                     }
@@ -114,7 +116,7 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 100;
+        int n = 10;
         while (--n >= 0) {
             if (!paymentMessagesQueue.isEmpty()) {
                 PaymentMessage paymentMessage = null;
@@ -134,7 +136,16 @@ public class RaceSentenceSpout implements IRichSpout {
                 } else {
                     _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
                     _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
-                    LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall"));
+                    LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
+                }
+            } else {
+                _collector.emit("count", new Values((int)0, (long)0, (double)-1.0));
+                _collector.emit("ratio", new Values((int)0, (long)0, (double)-1.0));
+                LOG.info("shoot end signal.");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
             //String sentence = CHOICES[_rand.nextInt(CHOICES.length)];

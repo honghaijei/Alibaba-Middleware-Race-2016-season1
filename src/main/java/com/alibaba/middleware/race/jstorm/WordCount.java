@@ -23,6 +23,7 @@ public class WordCount implements IRichBolt {
     int count;
     @Override
     public void execute(Tuple tuple) {
+        /*
         int platform = tuple.getInteger(0);
         long timestamp = tuple.getLong(1);
         double amount = tuple.getDouble(2);
@@ -63,6 +64,7 @@ public class WordCount implements IRichBolt {
             }
 
         }
+        */
     }
 
     @Override
