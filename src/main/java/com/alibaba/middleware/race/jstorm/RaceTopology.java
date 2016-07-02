@@ -29,7 +29,9 @@ public class RaceTopology {
     private static Logger LOG = LoggerFactory.getLogger(RaceTopology.class);
 
     public static void main(String[] args) throws Exception {
-        System.setOut(new PrintStream(new FileOutputStream("log_haijie.txt")));
+        if (RaceConfig.DEBUG) {
+            System.setOut(new PrintStream(new FileOutputStream("log_haijie.txt")));
+        }
 
 
         Config conf = new Config();
