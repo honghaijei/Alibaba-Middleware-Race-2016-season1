@@ -3,7 +3,7 @@ package com.alibaba.middleware.race;
 import java.io.Serializable;
 
 public class RaceConfig implements Serializable {
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
     //这些是写tair key的前缀
     public static String prex_tmall = "platformTmall_";
     public static String prex_taobao = "platformTaobao_";
