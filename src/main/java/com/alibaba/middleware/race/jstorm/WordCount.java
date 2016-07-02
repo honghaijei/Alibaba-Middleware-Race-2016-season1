@@ -8,10 +8,13 @@ import backtype.storm.tuple.Tuple;
 import com.alibaba.middleware.race.RaceConfig;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class WordCount implements IRichBolt {
+    private static Logger LOG = LoggerFactory.getLogger(WordCount.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
     TreeMap<Long, Double> counter1 = new TreeMap<Long, Double>();
@@ -52,8 +55,13 @@ public class WordCount implements IRichBolt {
             double r1 = entry1 == null ? 0.0 : entry1.getValue();
             double r2 = entry2 == null ? 0.0 : entry2.getValue();
             long tm = t * 60;
-            tairOperator.write(RaceConfig.prex_ratio + RaceConfig.team_code + tm, r2 / r1);
-            System.out.println(RaceConfig.prex_ratio + RaceConfig.team_code + tm + "\t" + (r2 / r1));
+            boolean succ = tairOperator.write(RaceConfig.prex_ratio + RaceConfig.team_code + tm, r2 / r1);
+            if (succ) {
+                LOG.info("Write to tair success, " + RaceConfig.prex_ratio + RaceConfig.team_code + tm + "\t" + (r2 / r1));
+            } else {
+                LOG.info("Write to tair error, " + RaceConfig.prex_ratio + RaceConfig.team_code + tm + "\t" + (r2 / r1));
+            }
+
         }
     }
 

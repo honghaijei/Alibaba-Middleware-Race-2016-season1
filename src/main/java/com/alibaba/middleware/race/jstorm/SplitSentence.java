@@ -9,12 +9,15 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 import com.alibaba.middleware.race.RaceConfig;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 
 public class SplitSentence implements IRichBolt {
+    private static Logger LOG = LoggerFactory.getLogger(SplitSentence.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
     Map<Long, Double> counter = new HashMap<Long, Double>();
@@ -23,12 +26,14 @@ public class SplitSentence implements IRichBolt {
         int platform = tuple.getInteger(0);
         long timestamp = tuple.getLong(1);
         double amount = tuple.getDouble(2);
+        LOG.info(String.format("get a payment message, platform: %d, timestamp: %d, amount: %f", platform, timestamp, amount));
         long minute = timestamp / 1000 / 60;
         double value = counter.containsKey(minute) ? counter.get(minute) + amount : amount;
         counter.put(minute, value);
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
         tairOperator.write(platformPrefix + RaceConfig.team_code + minute, value);
-        System.out.println(platformPrefix + RaceConfig.team_code + (minute * 60) + "\t" + value);
+        LOG.info(platformPrefix + RaceConfig.team_code + (minute * 60) + "\t" + value);
+
         collector.emit(new Values(platform, minute, value));
     }
 

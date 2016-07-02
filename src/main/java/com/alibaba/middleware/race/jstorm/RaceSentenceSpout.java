@@ -48,11 +48,12 @@ public class RaceSentenceSpout implements IRichSpout {
 
     @Override
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
+        LOG.info("open spout.");
         DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.MetaConsumerGroup);
-        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
         //�ڱ��ش��broker��,�ǵ�ָ��nameServer�ĵ�ַ
         if (RaceConfig.DEBUG) {
+            consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
             consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
         }
         paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(100000000);
@@ -72,12 +73,11 @@ public class RaceSentenceSpout implements IRichSpout {
 
                         byte[] body = msg.getBody();
                         if (body.length == 2 && body[0] == 0 && body[1] == 0) {
-                            System.out.println("Got the end signal");
                             continue;
                         }
                         if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
                             PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
-                            System.out.println("get " + paymentMessage.toString());
+                            LOG.info("get " + paymentMessage.toString());
                             try {
                                 paymentMessagesQueue.put(paymentMessage);
                             } catch (InterruptedException e) {
@@ -85,13 +85,13 @@ public class RaceSentenceSpout implements IRichSpout {
                             }
                         } else {
                             OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, body);
-                            System.out.println("get " + orderMessage.toString());
+                            LOG.info("get " + orderMessage.toString());
                             if (msg.getTopic().equals(RaceConfig.MqTaobaoTradeTopic)) {
                                 taobaoOrderIdSet.add(orderMessage.getOrderId());
-                                System.out.println(orderMessage.getOrderId() + " is taobao id.");
+                                LOG.info(orderMessage.getOrderId() + " is taobao id.");
                             } else {
                                 tmallOrderIdSet.add(orderMessage.getOrderId());
-                                System.out.println(orderMessage.getOrderId() + " is tmall id.");
+                                LOG.info(orderMessage.getOrderId() + " is tmall id.");
                             }
                         }
                     }
@@ -134,7 +134,7 @@ public class RaceSentenceSpout implements IRichSpout {
                 } else {
                     _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
                     _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
-                    System.out.println("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall"));
+                    LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall"));
                 }
             }
             //String sentence = CHOICES[_rand.nextInt(CHOICES.length)];
