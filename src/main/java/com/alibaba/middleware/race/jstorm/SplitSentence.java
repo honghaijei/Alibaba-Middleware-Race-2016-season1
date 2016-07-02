@@ -53,7 +53,9 @@ public class SplitSentence implements IRichBolt {
         counter.get(platform).put(minute, value);
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
         String key = platformPrefix + RaceConfig.team_code + (minute * 60);
-        cache.set(key, value);
+        //cache.set(key, value);
+        this.save(tairOperator, key, value);
+        LOG.info(String.format("put payment to cache, platform: %d, minute: %d, amount: %f, cache size: %d", platform, minute, amount, cache.size()));
         /*
         boolean succ = tairOperator.write(platformPrefix + RaceConfig.team_code + minute, value);
         if (succ) {

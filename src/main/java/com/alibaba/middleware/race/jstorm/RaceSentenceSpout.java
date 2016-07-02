@@ -172,11 +172,11 @@ public class RaceSentenceSpout implements IRichSpout {
                     LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
                 }
             } else {
-                _collector.emit("count", new Values((int)0, (long)0, (double)-1.0));
-                _collector.emit("ratio", new Values((int)0, (long)0, (double)-1.0));
+                _collector.emit("count", new Values((int)0, (long)_rand.nextLong(), (double)-1.0));
+                _collector.emit("ratio", new Values((int)0, (long)_rand.nextLong(), (double)-1.0));
                 LOG.info("shoot end signal.");
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
