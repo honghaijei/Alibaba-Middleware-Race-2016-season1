@@ -39,6 +39,9 @@ public class SplitSentence implements IRichBolt {
         int platform = tuple.getInteger(0);
         long timestamp = tuple.getLong(1);
         double amount = tuple.getDouble(2);
+        if (platform != 0) {
+            return;
+        }
         if (amount < 0) {
             LOG.info("get end signal, force all cache to tair.");
             for (String key : new ArrayList<String>(cache.keySet())) {
