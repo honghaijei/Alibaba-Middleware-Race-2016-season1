@@ -79,7 +79,7 @@ public class SplitSentence implements IRichBolt {
         counter.add(new HashMap<Long, Double>());
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
-        cache = new LRUCache(60, tairOperator);
+        cache = new LRUCache(10, tairOperator);
     }
 
     @Override

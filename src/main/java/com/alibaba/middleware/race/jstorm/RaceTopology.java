@@ -31,7 +31,7 @@ public class RaceTopology {
 
     public static void main(String[] args) throws Exception {
         if (RaceConfig.DEBUG) {
-            System.setOut(new PrintStream(new FileOutputStream("log_haijie.txt")));
+            System.setOut(new PrintStream(new FileOutputStream("log_haijie.log")));
         }
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
                 ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME
@@ -60,7 +60,7 @@ public class RaceTopology {
         builder.setSpout("spout", new RaceSentenceSpout(), spout_Parallelism_hint);
         // builder.setBolt("split", new SplitSentence(), split_Parallelism_hint).shuffleGrouping("spout");
         builder.setBolt("split", new SplitSentence(), split_Parallelism_hint).fieldsGrouping("spout", "count", new Fields("minute"));
-        builder.setBolt("count", new WordCount(), count_Parallelism_hint).fieldsGrouping("spout", "ratio", new Fields("timestamp"));
+        //builder.setBolt("count", new WordCount(), count_Parallelism_hint).fieldsGrouping("spout", "ratio", new Fields("timestamp"));
         String topologyName = RaceConfig.JstormTopologyName;
 
         try {
