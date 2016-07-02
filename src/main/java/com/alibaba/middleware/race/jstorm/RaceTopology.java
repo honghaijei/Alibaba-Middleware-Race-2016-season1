@@ -33,12 +33,12 @@ public class RaceTopology {
         if (RaceConfig.DEBUG) {
             System.setOut(new PrintStream(new FileOutputStream("log_haijie.log")));
         }
-        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
-                ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME
-
-        );
-        rootLogger.setLevel(Level.toLevel("error"));
-
+        if (!RaceConfig.DEBUG) {
+            ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
+                    ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME
+            );
+            rootLogger.setLevel(Level.toLevel("error"));
+        }
         LOG.trace("test trace");
         LOG.debug("test debug");
         LOG.info("test info.");

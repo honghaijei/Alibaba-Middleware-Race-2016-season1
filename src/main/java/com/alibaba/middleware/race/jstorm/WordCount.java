@@ -41,7 +41,7 @@ public class WordCount implements IRichBolt {
             prev += amount;
             counter1.put(minute, prev);
             for (Map.Entry<Long, Double> t : new ArrayList<Map.Entry<Long, Double>>(counter1.tailMap(minute, false).entrySet())) {
-                prev += t.getValue();
+                prev = t.getValue() + amount;
                 counter1.put(t.getKey(), prev);
             }
 
@@ -51,7 +51,7 @@ public class WordCount implements IRichBolt {
             prev += amount;
             counter2.put(minute, prev);
             for (Map.Entry<Long, Double> t : new ArrayList<Map.Entry<Long, Double>>(counter2.tailMap(minute, false).entrySet())) {
-                prev += t.getValue();
+                prev = t.getValue() + amount;
                 counter2.put(t.getKey(), prev);
             }
         }
