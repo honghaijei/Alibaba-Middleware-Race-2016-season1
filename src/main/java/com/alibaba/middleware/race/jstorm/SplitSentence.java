@@ -31,7 +31,7 @@ public class SplitSentence implements IRichBolt {
         if (succ) {
             SplitSentence.LOG.info("Write to tair success, " + key + "\t" + value);
         } else {
-            SplitSentence.LOG.info("Write to tair error, " + key + "\t" + value);
+            SplitSentence.LOG.error("Write to tair error, " + key + "\t" + value);
         }
     }
 
@@ -53,8 +53,8 @@ public class SplitSentence implements IRichBolt {
         counter.get(platform).put(minute, value);
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
         String key = platformPrefix + RaceConfig.team_code + (minute * 60);
-        //cache.set(key, value);
-        this.save(tairOperator, key, value);
+        cache.set(key, value);
+        //this.save(tairOperator, key, value);
         LOG.info(String.format("put payment to cache, platform: %d, minute: %d, amount: %f, cache size: %d", platform, minute, amount, cache.size()));
         /*
         boolean succ = tairOperator.write(platformPrefix + RaceConfig.team_code + minute, value);
@@ -79,7 +79,7 @@ public class SplitSentence implements IRichBolt {
         counter.add(new HashMap<Long, Double>());
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
-        cache = new LRUCache(2, tairOperator);
+        cache = new LRUCache(60, tairOperator);
     }
 
     @Override
