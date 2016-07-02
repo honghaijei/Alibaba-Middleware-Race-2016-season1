@@ -22,7 +22,8 @@ public class SplitSentence implements IRichBolt {
     public static Logger LOG = LoggerFactory.getLogger(SplitSentence.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
-    Map<Long, Double> counter = new HashMap<Long, Double>();
+    ArrayList<HashMap<Long, Double>> counter;
+
     LRUCache cache;
     long recvCount = 0;
     public static void save(TairOperatorImpl tairOperator, String key, double value) {
@@ -48,8 +49,8 @@ public class SplitSentence implements IRichBolt {
             return;
         }
         LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
-        double value = counter.containsKey(minute) ? counter.get(minute) + amount : amount;
-        counter.put(minute, value);
+        double value = counter.get(platform).containsKey(minute) ? counter.get(platform).get(minute) + amount : amount;
+        counter.get(platform).put(minute, value);
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
         String key = platformPrefix + RaceConfig.team_code + (minute * 60);
         cache.set(key, value);
@@ -71,6 +72,9 @@ public class SplitSentence implements IRichBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
+        counter = new ArrayList<HashMap<Long, Double>>();
+        counter.add(new HashMap<Long, Double>());
+        counter.add(new HashMap<Long, Double>());
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
         cache = new LRUCache(2, tairOperator);
