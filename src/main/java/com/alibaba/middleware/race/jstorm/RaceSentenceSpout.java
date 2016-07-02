@@ -167,7 +167,7 @@ public class RaceSentenceSpout implements IRichSpout {
                         e.printStackTrace();
                     }
                 } else {
-                    _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
+                    _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
                     _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
                     LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
                 }
@@ -200,7 +200,7 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         //declarer.declare(new Fields("platform", "timestamp", "amount"));
-        declarer.declareStream("count", new Fields("platform", "timestamp", "amount"));
+        declarer.declareStream("count", new Fields("platform", "minute", "amount"));
         declarer.declareStream("ratio", new Fields("platform", "timestamp", "amount"));
     }
 

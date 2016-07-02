@@ -37,11 +37,8 @@ public class SplitSentence implements IRichBolt {
     @Override
     public void execute(Tuple tuple) {
         int platform = tuple.getInteger(0);
-        long timestamp = tuple.getLong(1);
+        long minute = tuple.getLong(1);
         double amount = tuple.getDouble(2);
-        if (platform != 0) {
-            return;
-        }
         if (amount < 0) {
             LOG.info("get end signal, force all cache to tair.");
             for (String key : new ArrayList<String>(cache.keySet())) {
@@ -50,8 +47,7 @@ public class SplitSentence implements IRichBolt {
             cache.clear();
             return;
         }
-        LOG.info(String.format("get a payment message, platform: %d, timestamp: %d, amount: %f, count=%d", platform, timestamp, amount, recvCount++));
-        long minute = timestamp / 1000 / 60;
+        LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
         double value = counter.containsKey(minute) ? counter.get(minute) + amount : amount;
         counter.put(minute, value);
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
