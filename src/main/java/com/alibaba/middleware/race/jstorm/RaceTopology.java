@@ -59,8 +59,8 @@ public class RaceTopology {
 
         builder.setSpout("spout", new RaceSentenceSpout(), spout_Parallelism_hint);
         // builder.setBolt("split", new SplitSentence(), split_Parallelism_hint).shuffleGrouping("spout");
-        builder.setBolt("split", new SplitSentence(), split_Parallelism_hint).fieldsGrouping("spout", "count", new Fields("minute"));
-        //builder.setBolt("count", new WordCount(), count_Parallelism_hint).fieldsGrouping("spout", "ratio", new Fields("timestamp"));
+        builder.setBolt("split", new SplitSentence(), split_Parallelism_hint).fieldsGrouping("spout", "count", new Fields("platform"));
+        builder.setBolt("count", new WordCount(), count_Parallelism_hint).shuffleGrouping("spout", "ratio");
         String topologyName = RaceConfig.JstormTopologyName;
 
         try {

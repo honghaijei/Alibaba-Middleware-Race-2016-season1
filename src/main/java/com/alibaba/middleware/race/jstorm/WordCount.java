@@ -5,6 +5,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Tuple;
+import com.alibaba.middleware.race.LRUCache;
 import com.alibaba.middleware.race.RaceConfig;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry;
@@ -20,13 +21,19 @@ public class WordCount implements IRichBolt {
     TreeMap<Long, Double> counter1 = new TreeMap<Long, Double>();
     TreeMap<Long, Double> counter2 = new TreeMap<Long, Double>();
     TreeMap<Long, Double> ratio = new TreeMap<Long, Double>();
+    LRUCache cache;
     int count;
     @Override
     public void execute(Tuple tuple) {
-        /*
+
         int platform = tuple.getInteger(0);
         long timestamp = tuple.getLong(1);
         double amount = tuple.getDouble(2);
+        if (amount < 0) {
+            LOG.info("get end signal, force all cache to tair.");
+            cache.force();
+            return;
+        }
         long minute = timestamp / 1000 / 60;
         if (platform == 0) {
             Map.Entry<Long, Double> entry = counter1.lowerEntry(minute);
@@ -56,15 +63,19 @@ public class WordCount implements IRichBolt {
             double r1 = entry1 == null ? 0.0 : entry1.getValue();
             double r2 = entry2 == null ? 0.0 : entry2.getValue();
             long tm = t * 60;
+            String key = RaceConfig.prex_ratio + RaceConfig.team_code + tm;
+            double value = r2 / r1;
+            /*
             boolean succ = tairOperator.write(RaceConfig.prex_ratio + RaceConfig.team_code + tm, r2 / r1);
             if (succ) {
                 LOG.info("Write to tair success, " + RaceConfig.prex_ratio + RaceConfig.team_code + tm + "\t" + (r2 / r1));
             } else {
                 LOG.info("Write to tair error, " + RaceConfig.prex_ratio + RaceConfig.team_code + tm + "\t" + (r2 / r1));
             }
-
+            */
+            cache.set(key, value);
         }
-        */
+
     }
 
     @Override
@@ -77,6 +88,7 @@ public class WordCount implements IRichBolt {
         this.collector = collector;
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        cache = new LRUCache(2, tairOperator, this.LOG);
     }
 
     @Override

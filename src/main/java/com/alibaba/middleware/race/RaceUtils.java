@@ -1,8 +1,11 @@
 package com.alibaba.middleware.race;
 
+import com.alibaba.middleware.race.Tair.TairOperatorImpl;
+import com.alibaba.middleware.race.jstorm.SplitSentence;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import org.slf4j.Logger;
 
 
 public class RaceUtils {
@@ -29,6 +32,14 @@ public class RaceUtils {
         input.close();
         T ret = kryo.readObject(input, tClass);
         return ret;
+    }
+    public static void save(Logger LOG, TairOperatorImpl tairOperator, String key, double value) {
+        boolean succ = tairOperator.write(key, value);
+        if (succ) {
+            LOG.info("Write to tair success, " + key + "\t" + value);
+        } else {
+            LOG.error("Write to tair error, " + key + "\t" + value);
+        }
     }
 
 }

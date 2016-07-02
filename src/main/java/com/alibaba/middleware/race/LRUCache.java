@@ -2,11 +2,9 @@ package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import com.alibaba.middleware.race.jstorm.SplitSentence;
+import org.slf4j.Logger;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by hahong on 2016/7/2.
@@ -14,17 +12,19 @@ import java.util.Set;
 public class LRUCache extends LinkedHashMap<String, Double> {
     private int capacity;
     private TairOperatorImpl tairOperator;
-    public LRUCache(int capacity, TairOperatorImpl tairOperator) {
+    private Logger LOG;
+    public LRUCache(int capacity, TairOperatorImpl tairOperator, Logger LOG) {
         super(capacity, 0.75f, true);
         this.capacity = capacity;
         this.tairOperator = tairOperator;
+        this.LOG = LOG;
     }
 
     protected boolean removeEldestEntry(Map.Entry<String, Double> entry) {
         synchronized (this) {
             boolean res = this.size() > capacity;
             if (res) {
-                SplitSentence.save(tairOperator, entry.getKey(), entry.getValue());
+                RaceUtils.save(LOG, tairOperator, entry.getKey(), entry.getValue());
             }
             return res;
         }
@@ -39,15 +39,19 @@ public class LRUCache extends LinkedHashMap<String, Double> {
             }
         }
     }
-    public Set<String> keySet() {
-        synchronized (this) {
-            return super.keySet();
-        }
-    }
 
     public void set(String key, double value) {
         synchronized (this) {
             super.put(key, value);
+        }
+    }
+
+    public void force() {
+        synchronized (this) {
+            for (Map.Entry<String, Double> e : this.entrySet()) {
+                RaceUtils.save(this.LOG, tairOperator, e.getKey(), e.getValue());
+            }
+            this.clear();
         }
     }
 }

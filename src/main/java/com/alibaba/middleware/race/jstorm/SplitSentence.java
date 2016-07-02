@@ -9,6 +9,7 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 import com.alibaba.middleware.race.LRUCache;
 import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,14 +27,7 @@ public class SplitSentence implements IRichBolt {
 
     LRUCache cache;
     long recvCount = 0;
-    public static void save(TairOperatorImpl tairOperator, String key, double value) {
-        boolean succ = tairOperator.write(key, value);
-        if (succ) {
-            SplitSentence.LOG.info("Write to tair success, " + key + "\t" + value);
-        } else {
-            SplitSentence.LOG.error("Write to tair error, " + key + "\t" + value);
-        }
-    }
+
 
     @Override
     public void execute(Tuple tuple) {
@@ -42,10 +36,7 @@ public class SplitSentence implements IRichBolt {
         double amount = tuple.getDouble(2);
         if (amount < 0) {
             LOG.info("get end signal, force all cache to tair.");
-            for (String key : new ArrayList<String>(cache.keySet())) {
-                this.save(tairOperator, key, cache.get(key));
-            }
-            cache.clear();
+            cache.force();
             return;
         }
         LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
@@ -79,7 +70,7 @@ public class SplitSentence implements IRichBolt {
         counter.add(new HashMap<Long, Double>());
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
-        cache = new LRUCache(1, tairOperator);
+        cache = new LRUCache(2, tairOperator, this.LOG);
     }
 
     @Override
