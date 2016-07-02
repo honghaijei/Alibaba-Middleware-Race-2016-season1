@@ -39,6 +39,7 @@ public class RaceSentenceSpout implements IRichSpout {
     int sendNumPerNexttuple;
     BlockingQueue<PaymentMessage> paymentMessagesQueue;
     ConcurrentSet<Long> taobaoOrderIdSet;
+    ConcurrentSet<Long> tmallOrderIdSet;
     private static final String[] CHOICES = {"marry had a little lamb whos fleese was white as snow",
             "and every where that marry went the lamb was sure to go",
             "one two three four five six seven eight nine ten",
@@ -50,16 +51,18 @@ public class RaceSentenceSpout implements IRichSpout {
         DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.MetaConsumerGroup);
         consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
-        //在本地搭建好broker后,记得指定nameServer的地址
+        //锟节憋拷锟截搭建锟斤拷broker锟斤拷,锟角碉拷指锟斤拷nameServer锟侥碉拷址
         if (RaceConfig.DEBUG) {
             consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
         }
-        paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(10000);
+        paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(100000000);
         taobaoOrderIdSet = new ConcurrentSet<Long>();
+        tmallOrderIdSet = new ConcurrentSet<Long>();
         try {
-            consumer.subscribe(RaceConfig.MqPayTopic, "*");
             consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
             consumer.subscribe(RaceConfig.MqTmallTradeTopic, "*");
+            consumer.subscribe(RaceConfig.MqPayTopic, "*");
+
             consumer.registerMessageListener(new MessageListenerConcurrently() {
 
                 @Override
@@ -69,21 +72,26 @@ public class RaceSentenceSpout implements IRichSpout {
 
                         byte[] body = msg.getBody();
                         if (body.length == 2 && body[0] == 0 && body[1] == 0) {
-                            //Info: 生产者停止生成数据, 并不意味着马上结束
                             System.out.println("Got the end signal");
                             continue;
                         }
                         if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
                             PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
+                            System.out.println("get " + paymentMessage.toString());
                             try {
                                 paymentMessagesQueue.put(paymentMessage);
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
                         } else {
+                            OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, body);
+                            System.out.println("get " + orderMessage.toString());
                             if (msg.getTopic().equals(RaceConfig.MqTaobaoTradeTopic)) {
-                                OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, body);
                                 taobaoOrderIdSet.add(orderMessage.getOrderId());
+                                System.out.println(orderMessage.getOrderId() + " is taobao id.");
+                            } else {
+                                tmallOrderIdSet.add(orderMessage.getOrderId());
+                                System.out.println(orderMessage.getOrderId() + " is tmall id.");
                             }
                         }
                     }
@@ -116,9 +124,18 @@ public class RaceSentenceSpout implements IRichSpout {
                     e.printStackTrace();
                 }
                 boolean isTaobao = taobaoOrderIdSet.contains(paymentMessage.getOrderId());
-                _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
-                _collector.emit("ratio", new Values((int)paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
-                System.out.println("shoot.");
+                boolean isTmall = tmallOrderIdSet.contains(paymentMessage.getOrderId());
+                if (!isTaobao && !isTmall) {
+                    try {
+                        paymentMessagesQueue.put(paymentMessage);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
+                    _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
+                    System.out.println("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall"));
+                }
             }
             //String sentence = CHOICES[_rand.nextInt(CHOICES.length)];
             //_collector.emit(new Values(sentence));

@@ -9,6 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import backtype.storm.LocalCluster;
 
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+
 
 /**
  * 这是一个很简单的例子
@@ -26,12 +29,13 @@ public class RaceTopology {
     private static Logger LOG = LoggerFactory.getLogger(RaceTopology.class);
 
     public static void main(String[] args) throws Exception {
+        System.setOut(new PrintStream(new FileOutputStream("log_haijie.txt")));
 
-        LocalCluster cluster = new LocalCluster();
 
         Config conf = new Config();
-
+        LocalCluster cluster = null;
         if (RaceConfig.DEBUG) {
+            cluster = new LocalCluster();
             //conf.put(Config.TOPOLOGY_MAX_TASK_PARALLELISM, 1);
         }
         int spout_Parallelism_hint = 1;
