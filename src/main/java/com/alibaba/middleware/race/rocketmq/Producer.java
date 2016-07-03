@@ -45,7 +45,7 @@ public class Producer {
             try {
                 final int platform = rand.nextInt(2);
                 final OrderMessage orderMessage = ( platform == 0 ? OrderMessage.createTbaoMessage() : OrderMessage.createTmallMessage());
-                orderMessage.setCreateTime(System.currentTimeMillis());
+                orderMessage.setCreateTime(System.currentTimeMillis() * 10);
 
                 byte [] body = RaceUtils.writeKryoObject(orderMessage);
 

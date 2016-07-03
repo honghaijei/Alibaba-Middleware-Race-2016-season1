@@ -41,7 +41,7 @@ public class RaceSentenceSpout implements IRichSpout {
     BlockingQueue<PaymentMessage> paymentMessagesQueue;
     ConcurrentSet<Long> taobaoOrderIdSet;
     ConcurrentSet<Long> tmallOrderIdSet;
-    // ConcurrentHashMap<PaymentMessageKey, Boolean> done;
+    ConcurrentHashMap<Long, Boolean> done;
     long recvCount = 0;
     long shootCount = 0;
     private static final String[] CHOICES = {"marry had a little lamb whos fleese was white as snow",
@@ -90,7 +90,7 @@ public class RaceSentenceSpout implements IRichSpout {
         paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(100000000);
         taobaoOrderIdSet = new ConcurrentSet<Long>();
         tmallOrderIdSet = new ConcurrentSet<Long>();
-        // done = new ConcurrentHashMap<PaymentMessageKey, Boolean>();
+        done = new ConcurrentHashMap<Long, Boolean>();
         try {
             consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
             consumer.subscribe(RaceConfig.MqTmallTradeTopic, "*");
@@ -111,8 +111,12 @@ public class RaceSentenceSpout implements IRichSpout {
                             PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
                             LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
                             try {
-                                PaymentMessageKey hashKey = new PaymentMessageKey(paymentMessage.getOrderId(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount());
-                                paymentMessagesQueue.put(paymentMessage);
+
+                                long hashKey = paymentMessage.getOrderId() * 49993 + paymentMessage.getCreateTime() * 49999;
+                                if (!done.containsKey(hashKey)) {
+                                    paymentMessagesQueue.put(paymentMessage);
+                                    done.put(hashKey, true);
+                                }
 
 
                             } catch (InterruptedException e) {
