@@ -29,6 +29,7 @@ public class WordCount implements IRichBolt {
         int platform = tuple.getInteger(0);
         long timestamp = tuple.getLong(1);
         double amount = tuple.getDouble(2);
+        /*
         long minute = timestamp / 1000 / 60;
         if (amount < 0) {
             double prev1 = 0.0, prev2 = 0.0;
@@ -59,7 +60,8 @@ public class WordCount implements IRichBolt {
             prev += amount;
             counter2.put(minute, prev);
         }
-        /*
+        */
+
         if (amount < 0) {
             LOG.info("get end signal, force all cache to tair.");
             cache.force();
@@ -98,7 +100,7 @@ public class WordCount implements IRichBolt {
             double value = r2 / r1;
             cache.set(key, value);
         }
-        */
+        
 
     }
 
