@@ -116,6 +116,9 @@ public class RaceSentenceSpout implements IRichSpout {
                                 if (!done.containsKey(hashKey)) {
                                     paymentMessagesQueue.put(paymentMessage);
                                     done.put(hashKey, true);
+                                } else {
+                                    paymentMessagesQueue.put(paymentMessage);
+                                    done.put(hashKey, true);
                                 }
 
 
