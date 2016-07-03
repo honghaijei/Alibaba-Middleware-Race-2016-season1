@@ -31,26 +31,19 @@ public class WordCount implements IRichBolt {
         double amount = tuple.getDouble(2);
         long minute = timestamp / 1000 / 60;
         if (amount < 0) {
-            double prev = 0.0;
-            for (long m : new ArrayList<Long>(counter1.keySet())) {
-                prev += counter1.get(m);
-                counter1.put(m, prev);
-            }
-            prev = 0.0;
-            for (long m : new ArrayList<Long>(counter2.keySet())) {
-                prev += counter2.get(m);
-                counter2.put(m, prev);
-            }
+            double prev1 = 0.0, prev2 = 0.0;
             TreeSet<Long> ls = new TreeSet<Long>(counter1.keySet());
             ls.addAll(counter2.keySet());
             for (long t : ls) {
-                Map.Entry<Long, Double> entry1 = counter1.floorEntry(t);
-                Map.Entry<Long, Double> entry2 = counter2.floorEntry(t);
-                double r1 = entry1 == null ? 0.0 : entry1.getValue();
-                double r2 = entry2 == null ? 0.0 : entry2.getValue();
+                if (counter1.containsKey(t)) {
+                    prev1 += counter1.get(t);
+                }
+                if (counter2.containsKey(t)) {
+                    prev2 += counter2.get(t);
+                }
                 long tm = t * 60;
                 String key = RaceConfig.prex_ratio + RaceConfig.team_code + tm;
-                double value = r2 / r1;
+                double value = prev2 / prev1;
                 RaceUtils.save(this.LOG, this.tairOperator, key, value);
             }
             return;

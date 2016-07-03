@@ -7,6 +7,7 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 import com.alibaba.jstorm.utils.JStormUtils;
+import com.alibaba.middleware.race.LRUFilter;
 import com.alibaba.middleware.race.RaceConfig;
 import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.model.OrderMessage;
@@ -40,7 +41,7 @@ public class RaceSentenceSpout implements IRichSpout {
     int sendNumPerNexttuple;
     BlockingQueue<PaymentMessage> paymentMessagesQueue;
     ConcurrentHashMap<Long, Boolean> isTaobaoOrder;
-    ConcurrentHashMap<String, Boolean> done;
+    LRUFilter done;
     long recvCount = 0;
     long shootCount = 0;
     private static final String[] CHOICES = {"marry had a little lamb whos fleese was white as snow",
@@ -88,7 +89,7 @@ public class RaceSentenceSpout implements IRichSpout {
         }
         paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(100000000);
         isTaobaoOrder = new ConcurrentHashMap<Long, Boolean>();
-        done = new ConcurrentHashMap<String, Boolean>();
+        done = new LRUFilter(10000);
         try {
             consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
             consumer.subscribe(RaceConfig.MqTmallTradeTopic, "*");
@@ -164,8 +165,10 @@ public class RaceSentenceSpout implements IRichSpout {
                         e.printStackTrace();
                     }
                 } else {
-                    //_collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
+                    String str = paymentMessage.toString();
                     _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
+                    //_collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
+
                     //LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
                 }
             } else {
