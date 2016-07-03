@@ -6,10 +6,8 @@ import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
 import com.alibaba.middleware.race.LRUCache;
 import com.alibaba.middleware.race.RaceConfig;
-import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +16,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Created by hahong on 2016/7/3.
+ */
 
-public class SplitSentence implements IRichBolt {
+
+public class ClassifyBolt implements IRichBolt {
     public static Logger LOG = LoggerFactory.getLogger(SplitSentence.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
@@ -31,24 +33,35 @@ public class SplitSentence implements IRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
+        if (tuple.getSourceStreamId().equals("order")) {
+
+        } else {
+
+        }
         int platform = tuple.getInteger(0);
         long minute = tuple.getLong(1);
         double amount = tuple.getDouble(2);
         if (amount < 0) {
-            //LOG.info("get end signal, force all cache to tair.");
+            LOG.info("get end signal, force all cache to tair.");
             cache.force();
             return;
         }
-        //LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
+        LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
         double value = counter.get(platform).containsKey(minute) ? counter.get(platform).get(minute) + amount : amount;
         counter.get(platform).put(minute, value);
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
         String key = platformPrefix + RaceConfig.team_code + (minute * 60);
         cache.set(key, value);
         //this.save(tairOperator, key, value);
-
-        //LOG.info(String.format("put payment to cache, platform: %d, minute: %d, amount: %f, cache size: %d", platform, minute, value, cache.size()));
-
+        LOG.info(String.format("put payment to cache, platform: %d, minute: %d, amount: %f, cache size: %d", platform, minute, value, cache.size()));
+        /*
+        boolean succ = tairOperator.write(platformPrefix + RaceConfig.team_code + minute, value);
+        if (succ) {
+            LOG.info("Write to tair success, " + platformPrefix + RaceConfig.team_code + (minute * 60) + "\t" + value);
+        } else {
+            LOG.info("Write to tair error, " + platformPrefix + RaceConfig.team_code + (minute * 60) + "\t" + value);
+        }
+        */
     }
 
     @Override
