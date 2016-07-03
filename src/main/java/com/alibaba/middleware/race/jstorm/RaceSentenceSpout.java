@@ -39,7 +39,7 @@ public class RaceSentenceSpout implements IRichSpout {
     long startTime;
     boolean isStatEnable;
     int sendNumPerNexttuple;
-    BlockingQueue<PaymentMessage> paymentMessagesQueue;
+    LinkedBlockingDeque<PaymentMessage> paymentMessagesQueue;
     ConcurrentHashMap<Long, Boolean> isTaobaoOrder;
     LRUFilter done;
     long recvCount = 0;
@@ -160,7 +160,7 @@ public class RaceSentenceSpout implements IRichSpout {
                 Boolean isTaobao = isTaobaoOrder.get(paymentMessage.getOrderId());
                 if (isTaobao == null) {
                     try {
-                        paymentMessagesQueue.put(paymentMessage);
+                        paymentMessagesQueue.putFirst(paymentMessage);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

@@ -69,7 +69,7 @@ public class WordCount implements IRichBolt {
         }
         long minute = timestamp / 1000 / 60;
         if (platform == 0) {
-            Map.Entry<Long, Double> entry = counter1.lowerEntry(minute);
+            Map.Entry<Long, Double> entry = counter1.floorEntry(minute);
             double prev = entry == null ? 0.0 : entry.getValue();
             prev += amount;
             counter1.put(minute, prev);
@@ -79,7 +79,7 @@ public class WordCount implements IRichBolt {
             }
 
         } else {
-            Map.Entry<Long, Double> entry = counter2.lowerEntry(minute);
+            Map.Entry<Long, Double> entry = counter2.floorEntry(minute);
             double prev = entry == null ? 0.0 : entry.getValue();
             prev += amount;
             counter2.put(minute, prev);
@@ -100,7 +100,7 @@ public class WordCount implements IRichBolt {
             double value = r2 / r1;
             cache.set(key, value);
         }
-        
+
 
     }
 

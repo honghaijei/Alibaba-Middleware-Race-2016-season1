@@ -10,7 +10,7 @@ import java.util.Random;
  * 反序列出消息
  */
 
-public class PaymentMessage implements Serializable{
+public class PaymentMessage implements Serializable, Comparable<PaymentMessage> {
 
     private static final long serialVersionUID = -4721410670774102273L;
 
@@ -108,5 +108,12 @@ public class PaymentMessage implements Serializable{
 
     public short getPayPlatform() {
         return payPlatform;
+    }
+
+    @Override
+    public int compareTo(PaymentMessage o) {
+        if (this.getCreateTime() < o.getCreateTime()) return -1;
+        if (this.getCreateTime() > o.getCreateTime()) return 1;
+        return 0;
     }
 }
