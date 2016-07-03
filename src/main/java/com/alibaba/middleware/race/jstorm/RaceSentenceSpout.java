@@ -165,7 +165,7 @@ public class RaceSentenceSpout implements IRichSpout {
                     }
                 } else {
                     _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
-                    //_collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
+                    _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
                     //LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
                 }
             } else {
