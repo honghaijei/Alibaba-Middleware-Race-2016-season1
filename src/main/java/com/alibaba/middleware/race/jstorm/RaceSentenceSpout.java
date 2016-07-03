@@ -112,11 +112,8 @@ public class RaceSentenceSpout implements IRichSpout {
                             LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
                             try {
 
-                                long hashKey = paymentMessage.getOrderId() * 49993 + paymentMessage.getCreateTime() * 49999;
+                                long hashKey = paymentMessage.getOrderId() * 99989 + paymentMessage.getCreateTime() * 99991 + ((Double)paymentMessage.getPayAmount()).hashCode() * 99971;
                                 if (!done.containsKey(hashKey)) {
-                                    paymentMessagesQueue.put(paymentMessage);
-                                    done.put(hashKey, true);
-                                } else {
                                     paymentMessagesQueue.put(paymentMessage);
                                     done.put(hashKey, true);
                                 }
@@ -156,7 +153,7 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 10;
+        int n = 100;
         while (--n >= 0) {
             if (!paymentMessagesQueue.isEmpty()) {
                 PaymentMessage paymentMessage = null;
@@ -180,7 +177,9 @@ public class RaceSentenceSpout implements IRichSpout {
                 }
             } else {
                 _collector.emit("count", new Values((int)0, (long)_rand.nextLong(), (double)-1.0));
+                _collector.emit("count", new Values((int)1, (long)_rand.nextLong(), (double)-1.0));
                 _collector.emit("ratio", new Values((int)0, (long)_rand.nextLong(), (double)-1.0));
+                _collector.emit("ratio", new Values((int)1, (long)_rand.nextLong(), (double)-1.0));
                 LOG.error("shoot end signal.");
                 try {
                     Thread.sleep(100);
