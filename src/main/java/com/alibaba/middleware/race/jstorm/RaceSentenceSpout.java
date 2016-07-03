@@ -160,7 +160,7 @@ public class RaceSentenceSpout implements IRichSpout {
                 Boolean isTaobao = isTaobaoOrder.get(paymentMessage.getOrderId());
                 if (isTaobao == null) {
                     try {
-                        paymentMessagesQueue.putFirst(paymentMessage);
+                        paymentMessagesQueue.put(paymentMessage);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

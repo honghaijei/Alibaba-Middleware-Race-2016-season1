@@ -23,32 +23,37 @@ public class WordCount implements IRichBolt {
     TreeMap<Long, Double> counter2 = new TreeMap<Long, Double>();
     LRUCache cache;
     int count;
+    boolean dirty = false;
     @Override
     public void execute(Tuple tuple) {
 
         int platform = tuple.getInteger(0);
         long timestamp = tuple.getLong(1);
         double amount = tuple.getDouble(2);
-        /*
+/*
         long minute = timestamp / 1000 / 60;
         if (amount < 0) {
-            double prev1 = 0.0, prev2 = 0.0;
-            TreeSet<Long> ls = new TreeSet<Long>(counter1.keySet());
-            ls.addAll(counter2.keySet());
-            for (long t : ls) {
-                if (counter1.containsKey(t)) {
-                    prev1 += counter1.get(t);
+            if (dirty) {
+                double prev1 = 0.0, prev2 = 0.0;
+                TreeSet<Long> ls = new TreeSet<Long>(counter1.keySet());
+                ls.addAll(counter2.keySet());
+                for (long t : ls) {
+                    if (counter1.containsKey(t)) {
+                        prev1 += counter1.get(t);
+                    }
+                    if (counter2.containsKey(t)) {
+                        prev2 += counter2.get(t);
+                    }
+                    long tm = t * 60;
+                    String key = RaceConfig.prex_ratio + RaceConfig.team_code + tm;
+                    double value = prev2 / prev1;
+                    RaceUtils.save(this.LOG, this.tairOperator, key, value);
                 }
-                if (counter2.containsKey(t)) {
-                    prev2 += counter2.get(t);
-                }
-                long tm = t * 60;
-                String key = RaceConfig.prex_ratio + RaceConfig.team_code + tm;
-                double value = prev2 / prev1;
-                RaceUtils.save(this.LOG, this.tairOperator, key, value);
             }
+            dirty = false;
             return;
         }
+        dirty = true;
         if (platform == 0) {
             Double value = counter1.get(minute);
             double prev = value == null ? 0.0 : value;
@@ -60,7 +65,7 @@ public class WordCount implements IRichBolt {
             prev += amount;
             counter2.put(minute, prev);
         }
-        */
+*/
 
         if (amount < 0) {
             LOG.info("get end signal, force all cache to tair.");
