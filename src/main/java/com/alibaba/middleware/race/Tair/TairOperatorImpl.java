@@ -44,6 +44,9 @@ public class TairOperatorImpl {
     public Object get(Serializable key) {
         return tairManager.get(namespace, key).getValue().getValue();
     }
+    public long getModifyTime(Serializable key) {
+        return tairManager.get(namespace, key).getValue().getModifyDate();
+    }
 
     public boolean remove(Serializable key) {
         return false;

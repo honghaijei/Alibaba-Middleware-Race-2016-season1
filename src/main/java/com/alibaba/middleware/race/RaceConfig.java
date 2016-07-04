@@ -3,7 +3,8 @@ package com.alibaba.middleware.race;
 import java.io.Serializable;
 
 public class RaceConfig implements Serializable {
-    public static boolean DEBUG = false;
+    public static boolean LOCAL = false;
+    public static boolean LOCAL_CLUSTER = false;
     //这些是写tair key的前缀
     public static String prex_tmall = "platformTmall_";
     public static String prex_taobao = "platformTaobao_";
@@ -17,8 +18,8 @@ public class RaceConfig implements Serializable {
     public static String MqTmallTradeTopic = "MiddlewareRaceTestData_TMOrder";
     public static String MqTaobaoTradeTopic = "MiddlewareRaceTestData_TBOrder";
     public static String MqNamesrvAddr = "10.60.45.78:9876";
-    public static String TairConfigServer = DEBUG ? "10.60.45.77:5198" : "10.101.72.127:5198";
-    public static String TairSalveConfigServer = DEBUG ? "10.60.45.77:5198" : "10.101.72.128:5198";
-    public static String TairGroup = DEBUG ? "group_1" : "group_tianchi";
-    public static Integer TairNamespace = DEBUG ? 1 : 31943;
+    public static String TairConfigServer = LOCAL ? "10.60.45.77:5198" : "10.101.72.127:5198";
+    public static String TairSalveConfigServer = LOCAL ? "10.60.45.77:5198" : "10.101.72.128:5198";
+    public static String TairGroup = LOCAL ? "group_1" : "group_tianchi";
+    public static Integer TairNamespace = LOCAL ? 0 : 31943;
 }

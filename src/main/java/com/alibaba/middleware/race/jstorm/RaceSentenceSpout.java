@@ -10,6 +10,7 @@ import com.alibaba.jstorm.utils.JStormUtils;
 import com.alibaba.middleware.race.LRUFilter;
 import com.alibaba.middleware.race.RaceConfig;
 import com.alibaba.middleware.race.RaceUtils;
+import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import com.alibaba.middleware.race.model.OrderMessage;
 import com.alibaba.middleware.race.model.PaymentMessage;
 import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -19,16 +20,13 @@ import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently
 import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.consumer.ConsumeFromWhere;
 import com.alibaba.rocketmq.common.message.MessageExt;
-import io.netty.util.internal.ConcurrentSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class RaceSentenceSpout implements IRichSpout {
@@ -44,6 +42,7 @@ public class RaceSentenceSpout implements IRichSpout {
     LRUFilter done;
     long recvCount = 0;
     long shootCount = 0;
+    long lastEndSignal = System.currentTimeMillis();
     private static final String[] CHOICES = {"marry had a little lamb whos fleese was white as snow",
             "and every where that marry went the lamb was sure to go",
             "one two three four five six seven eight nine ten",
@@ -80,10 +79,14 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
         LOG.info("open spout.");
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.MetaConsumerGroup);
+        TairOperatorImpl tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
+                RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        tairOperator.write("start_flag", 0);
+        _rand = new Random();
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.LOCAL ? ((Long)_rand.nextLong()).toString() : RaceConfig.MetaConsumerGroup);
 
         //�ڱ��ش��broker��,�ǵ�ָ��nameServer�ĵ�ַ
-        if (RaceConfig.DEBUG) {
+        if (RaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
             consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
         }
@@ -138,7 +141,7 @@ public class RaceSentenceSpout implements IRichSpout {
         }
 
         _collector = collector;
-        _rand = new Random();
+
         sendingCount = 0;
         startTime = System.currentTimeMillis();
         sendNumPerNexttuple = JStormUtils.parseInt(conf.get("send.num.each.time"), 1);
@@ -148,7 +151,7 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 10000;
+        int n = 100000;
         while (--n >= 0) {
             if (!paymentMessagesQueue.isEmpty()) {
                 PaymentMessage paymentMessage = null;
@@ -172,17 +175,21 @@ public class RaceSentenceSpout implements IRichSpout {
                     //LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
                 }
             } else {
-                _collector.emit("count", new Values((int)0, (long)_rand.nextLong(), (double)-1.0));
-                _collector.emit("count", new Values((int)1, (long)_rand.nextLong(), (double)-1.0));
-                _collector.emit("ratio", new Values((int)0, (long)_rand.nextLong(), (double)-1.0));
-                _collector.emit("ratio", new Values((int)1, (long)_rand.nextLong(), (double)-1.0));
-                LOG.error("shoot end signal.");
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (System.currentTimeMillis() - lastEndSignal > 30000) {
+                    _collector.emit("count", new Values((int) 0, (long) _rand.nextLong(), (double) -1.0));
+                    _collector.emit("count", new Values((int) 1, (long) _rand.nextLong(), (double) -1.0));
+                    _collector.emit("ratio", new Values((int) 0, (long) _rand.nextLong(), (double) -1.0));
+                    _collector.emit("ratio", new Values((int) 1, (long) _rand.nextLong(), (double) -1.0));
+                    LOG.error("shoot end signal.");
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    lastEndSignal = System.currentTimeMillis();
                 }
             }
+
             //String sentence = CHOICES[_rand.nextInt(CHOICES.length)];
             //_collector.emit(new Values(sentence));
         }

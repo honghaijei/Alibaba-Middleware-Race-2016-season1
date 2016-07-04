@@ -36,7 +36,7 @@ public class RaceUtils {
     public static void save(Logger LOG, TairOperatorImpl tairOperator, String key, double value) {
         boolean succ = tairOperator.write(key, value);
         if (succ) {
-            //LOG.info("Write to tair success, " + key + "\t" + value);
+            LOG.info("Write to tair success, " + key + "\t" + value);
         } else {
             LOG.error("Write to tair error, " + key + "\t" + value);
         }

@@ -30,15 +30,17 @@ public class RaceTopology {
     private static Logger LOG = LoggerFactory.getLogger(RaceTopology.class);
 
     public static void main(String[] args) throws Exception {
-        if (RaceConfig.DEBUG) {
+        if (RaceConfig.LOCAL && !RaceConfig.LOCAL_CLUSTER) {
             System.setOut(new PrintStream(new FileOutputStream("log_haijie.log")));
         }
-        if (!RaceConfig.DEBUG) {
+        /*
+        if (!RaceConfig.LOCAL) {
             ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
                     ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME
             );
             rootLogger.setLevel(Level.toLevel("error"));
         }
+        */
         LOG.trace("test trace");
         LOG.debug("test debug");
         LOG.info("test info.");
@@ -47,7 +49,7 @@ public class RaceTopology {
 
         Config conf = new Config();
         LocalCluster cluster = null;
-        if (RaceConfig.DEBUG) {
+        if (RaceConfig.LOCAL && !RaceConfig.LOCAL_CLUSTER) {
             cluster = new LocalCluster();
             //conf.put(Config.TOPOLOGY_MAX_TASK_PARALLELISM, 1);
         }
@@ -63,7 +65,7 @@ public class RaceTopology {
         String topologyName = RaceConfig.JstormTopologyName;
 
         try {
-            if (RaceConfig.DEBUG) {
+            if (RaceConfig.LOCAL && !RaceConfig.LOCAL_CLUSTER) {
                 cluster.submitTopology("SequenceTest", conf, builder.createTopology());
                 Thread.sleep(300000);
                 cluster.killTopology("SequenceTest");

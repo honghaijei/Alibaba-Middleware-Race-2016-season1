@@ -22,9 +22,10 @@ import java.util.List;
  * RocketMq消费组信息我们都会再正式提交代码前告知选手
  */
 public class Consumer {
-
+    static int cnt = 0;
     public static void main(String[] args) throws InterruptedException, MQClientException {
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.MetaConsumerGroup);
+
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("zzz");
 
         /**
          * 设置Consumer第一次启动是从队列头部开始消费还是队列尾部开始消费<br>
@@ -54,7 +55,8 @@ public class Consumer {
 
                     //PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
                     //System.out.println(paymentMessage);
-                    System.out.println(msg.getTopic());
+                    //System.out.println(msg.getTopic());
+                    System.out.println(++cnt);
                 }
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
