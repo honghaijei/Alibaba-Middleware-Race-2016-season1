@@ -48,17 +48,21 @@ public class RaceTopology {
 
 
         Config conf = new Config();
+
         LocalCluster cluster = null;
         if (RaceConfig.LOCAL && !RaceConfig.LOCAL_CLUSTER) {
             cluster = new LocalCluster();
             //conf.put(Config.TOPOLOGY_MAX_TASK_PARALLELISM, 1);
         }
+        if (RaceConfig.LOCAL_CLUSTER || !RaceConfig.LOCAL) {
+            conf.setNumWorkers(4);
+        }
 
         TopologyBuilder builder = new TopologyBuilder();
 
         builder.setSpout("spout", new RaceMessageSpout(), 1);
-        builder.setBolt("classify", new ClassifyPlatform(), 3).fieldsGrouping("spout", "count", new Fields("orderId"));
-        builder.setBolt("split", new MessageCounter(), 2).fieldsGrouping("classify", new Fields("platform"));
+        builder.setBolt("classify", new ClassifyPlatform(), 4).fieldsGrouping("spout", "count", new Fields("orderId"));
+        builder.setBolt("split", new MessageCounter(), 4).fieldsGrouping("classify", new Fields("minute"));
         builder.setBolt("count", new RatioCount(), 1).shuffleGrouping("spout", "ratio");
         String topologyName = RaceConfig.JstormTopologyName;
         try {

@@ -27,8 +27,8 @@ import java.util.Map;
 public class ClassifyPlatform implements IRichBolt {
     OutputCollector collector;
     private static Logger LOG = LoggerFactory.getLogger(ClassifyPlatform.class);
-    Map<Long, Integer> orderType = new HashMap<Long, Integer>();
-    Map<Long, List<Tuple>> paymentCache = new HashMap<Long, List<Tuple>>();
+    Map<Long, Integer> orderType = new HashMap<Long, Integer>(50000);
+    Map<Long, List<Tuple>> paymentCache = new HashMap<Long, List<Tuple>>(50000);
 
     @Override
     public void execute(Tuple tuple) {

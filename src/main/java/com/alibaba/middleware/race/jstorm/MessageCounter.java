@@ -58,11 +58,11 @@ public class MessageCounter implements IRichBolt {
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
         counter = new ArrayList<HashMap<Long, Double>>();
-        counter.add(new HashMap<Long, Double>());
-        counter.add(new HashMap<Long, Double>());
+        counter.add(new HashMap<Long, Double>(3000));
+        counter.add(new HashMap<Long, Double>(3000));
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
-        cache = new LRUCache(5, tairOperator, this.LOG);
+        cache = new LRUCache(10, tairOperator, this.LOG);
     }
 
     @Override

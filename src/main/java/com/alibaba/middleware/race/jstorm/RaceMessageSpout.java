@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 public class RaceMessageSpout implements IRichSpout {
     private static Logger LOG = LoggerFactory.getLogger(RaceMessageSpout.class);
@@ -37,10 +38,7 @@ public class RaceMessageSpout implements IRichSpout {
     long startTime;
     boolean isStatEnable;
     int sendNumPerNexttuple;
-    LinkedBlockingDeque<PaymentMessage> paymentMessagesQueue;
-    LinkedBlockingDeque<OrderMessage> orderMessagesQueue;
-    ConcurrentHashMap<Long, Boolean> isTaobaoOrder;
-    LRUFilter done;
+    LinkedBlockingDeque<MessageExt> messagesQueue;
     long recvCount = 0;
     long shootCount = 0;
     long lastEndSignal = System.currentTimeMillis();
@@ -63,10 +61,8 @@ public class RaceMessageSpout implements IRichSpout {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
             consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
         }
-        paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(200000);
-        orderMessagesQueue = new LinkedBlockingDeque<OrderMessage>(200000);
-        isTaobaoOrder = new ConcurrentHashMap<Long, Boolean>();
-        done = new LRUFilter(10000);
+        consumer.setConsumeMessageBatchMaxSize(32);
+        messagesQueue = new LinkedBlockingDeque<MessageExt>(50000);
         try {
             consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
             consumer.subscribe(RaceConfig.MqTmallTradeTopic, "*");
@@ -83,6 +79,7 @@ public class RaceMessageSpout implements IRichSpout {
                         if (body.length == 2 && body[0] == 0 && body[1] == 0) {
                             continue;
                         }
+                        /*
                         if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
                             PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
                             //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
@@ -100,6 +97,12 @@ public class RaceMessageSpout implements IRichSpout {
                                 e.printStackTrace();
                             }
                             //LOG.info("get " + orderMessage.toString());
+                        }
+                        */
+                        try {
+                            messagesQueue.put(msg);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                         }
                     }
                     return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
@@ -121,30 +124,26 @@ public class RaceMessageSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 10000;
+        int n = 1000;
         while (--n >= 0) {
-
-            if (!orderMessagesQueue.isEmpty()) {
-                OrderMessage orderMessages = null;
-                try {
-                    orderMessages = orderMessagesQueue.take();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+            try {
+                MessageExt msg = messagesQueue.poll(2, TimeUnit.SECONDS);
+                if (msg != null) {
+                    if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
+                        PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, msg.getBody());
+                        //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
+                        _collector.emit("count", new Values(paymentMessage.getOrderId(), -1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
+                        _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
+                        continue;
+                    } else {
+                        OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, msg.getBody());
+                        int platform = msg.getTopic().equals(RaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
+                        _collector.emit("count", new Values(orderMessage.getOrderId(), platform, -1L, -1.0));
+                    }
+                    continue;
                 }
-                int platform = orderMessages.getBuyerId().equals(RaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
-                _collector.emit("count", new Values(orderMessages.getOrderId(), platform, -1L, -1.0));
-                continue;
-            }
-            if (!paymentMessagesQueue.isEmpty()) {
-                PaymentMessage paymentMessages = null;
-                try {
-                    paymentMessages = paymentMessagesQueue.take();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                _collector.emit("count", new Values(paymentMessages.getOrderId(), -1, paymentMessages.getCreateTime() / 1000 / 60, paymentMessages.getPayAmount()));
-                _collector.emit("ratio", new Values((int)paymentMessages.getPayPlatform(), paymentMessages.getCreateTime() / 1000 / 60, paymentMessages.getPayAmount()));
-                continue;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
             if (System.currentTimeMillis() - lastEndSignal > 30000) {
                 _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0));

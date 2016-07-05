@@ -18,8 +18,8 @@ public class RatioCount implements IRichBolt {
     private static Logger LOG = LoggerFactory.getLogger(RatioCount.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
-    TreeMap<Long, Double> counter1 = new TreeMap<Long, Double>();
-    TreeMap<Long, Double> counter2 = new TreeMap<Long, Double>();
+    Map<Long, Double> counter1 = new HashMap<Long, Double>(3000);
+    Map<Long, Double> counter2 = new HashMap<Long, Double>(3000);
     LRUCache cache;
     int count;
     boolean dirty = false;
