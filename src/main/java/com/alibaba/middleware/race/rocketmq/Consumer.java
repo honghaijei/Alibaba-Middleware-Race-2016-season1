@@ -1,6 +1,6 @@
 package com.alibaba.middleware.race.rocketmq;
 
-import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.MiddlewareRaceConfig;
 import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -8,8 +8,6 @@ import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently
 import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.consumer.ConsumeFromWhere;
 import com.alibaba.rocketmq.common.message.MessageExt;
-import com.alibaba.middleware.race.model.*;
-import com.alibaba.middleware.race.RaceUtils;
 
 import java.util.List;
 
@@ -34,11 +32,11 @@ public class Consumer {
         consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
         //在本地搭建好broker后,记得指定nameServer的地址
-        consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
+        consumer.setNamesrvAddr(MiddlewareRaceConfig.MqNamesrvAddr);
 
-        consumer.subscribe(RaceConfig.MqPayTopic, "*");
-        consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
-        consumer.subscribe(RaceConfig.MqTmallTradeTopic, "*");
+        consumer.subscribe(MiddlewareRaceConfig.MqPayTopic, "*");
+        consumer.subscribe(MiddlewareRaceConfig.MqTaobaoTradeTopic, "*");
+        consumer.subscribe(MiddlewareRaceConfig.MqTmallTradeTopic, "*");
         consumer.registerMessageListener(new MessageListenerConcurrently() {
 
             @Override

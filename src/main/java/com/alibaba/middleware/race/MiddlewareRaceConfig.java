@@ -2,9 +2,11 @@ package com.alibaba.middleware.race;
 
 import java.io.Serializable;
 
-public class RaceConfig implements Serializable {
+public class MiddlewareRaceConfig implements Serializable {
     public static boolean LOCAL = false;
     public static boolean LOCAL_CLUSTER = false;
+
+    public static long start_minute = 23462316L;
     //这些是写tair key的前缀
     public static String prex_tmall = "platformTmall_";
     public static String prex_taobao = "platformTaobao_";

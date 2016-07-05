@@ -1,7 +1,7 @@
 
 package com.alibaba.middleware.race.rocketmq;
 
-import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.MiddlewareRaceConfig;
 import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.client.producer.DefaultMQProducer;
 import com.alibaba.rocketmq.client.producer.SendCallback;
@@ -21,7 +21,7 @@ import java.util.concurrent.Semaphore;
 public class Producer {
 
     private static Random rand = new Random();
-    private static int count = 9000000;
+    private static int count = 100000;
 
     /**
      * 这是一个模拟堆积消息的程序，生成的消息模型和我们比赛的消息模型是一样的，
@@ -34,11 +34,11 @@ public class Producer {
         DefaultMQProducer producer = new DefaultMQProducer("please_rename_unique_group_name");
 
         //在本地搭建好broker后,记得指定nameServer的地址
-        producer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
+        producer.setNamesrvAddr(MiddlewareRaceConfig.MqNamesrvAddr);
 
         producer.start();
 
-        final String [] topics = new String[]{RaceConfig.MqTaobaoTradeTopic, RaceConfig.MqTmallTradeTopic};
+        final String [] topics = new String[]{MiddlewareRaceConfig.MqTaobaoTradeTopic, MiddlewareRaceConfig.MqTmallTradeTopic};
         final Semaphore semaphore = new Semaphore(0);
 
         for (int i = 0; i < count; i++) {
@@ -73,7 +73,7 @@ public class Producer {
 
                     if (retVal > 0) {
                         amount += paymentMessage.getPayAmount();
-                        final Message messageToBroker = new Message(RaceConfig.MqPayTopic, RaceUtils.writeKryoObject(paymentMessage));
+                        final Message messageToBroker = new Message(MiddlewareRaceConfig.MqPayTopic, RaceUtils.writeKryoObject(paymentMessage));
                         producer.send(messageToBroker, new SendCallback() {
                             public void onSuccess(SendResult sendResult) {
                                 System.out.println(paymentMessage);
@@ -103,9 +103,9 @@ public class Producer {
 
         //用一个short标识生产者停止生产数据
         byte [] zero = new  byte[]{0,0};
-        Message endMsgTB = new Message(RaceConfig.MqTaobaoTradeTopic, zero);
-        Message endMsgTM = new Message(RaceConfig.MqTmallTradeTopic, zero);
-        Message endMsgPay = new Message(RaceConfig.MqPayTopic, zero);
+        Message endMsgTB = new Message(MiddlewareRaceConfig.MqTaobaoTradeTopic, zero);
+        Message endMsgTM = new Message(MiddlewareRaceConfig.MqTmallTradeTopic, zero);
+        Message endMsgPay = new Message(MiddlewareRaceConfig.MqPayTopic, zero);
 
         try {
             producer.send(endMsgTB);

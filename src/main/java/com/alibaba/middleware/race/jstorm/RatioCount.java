@@ -1,14 +1,12 @@
 package com.alibaba.middleware.race.jstorm;
 
-import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.IBasicBolt;
-import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Tuple;
-import com.alibaba.middleware.race.LRUCache;
-import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.MinuteMap;
+import com.alibaba.middleware.race.MiddlewareRaceConfig;
 import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import org.slf4j.Logger;
@@ -19,8 +17,10 @@ import java.util.*;
 public class RatioCount implements IBasicBolt {
     private static Logger LOG = LoggerFactory.getLogger(RatioCount.class);
     TairOperatorImpl tairOperator;
-    Map<Long, Double> counter1 = new HashMap<Long, Double>(3000);
-    Map<Long, Double> counter2 = new HashMap<Long, Double>(3000);
+    //Map<Long, Double> counter1 = new HashMap<Long, Double>(3000);
+    //Map<Long, Double> counter2 = new HashMap<Long, Double>(3000);
+    MinuteMap counter1 = new MinuteMap();
+    MinuteMap counter2 = new MinuteMap();
     int count;
     boolean dirty = false;
     @Override
@@ -36,14 +36,16 @@ public class RatioCount implements IBasicBolt {
                 TreeSet<Long> ls = new TreeSet<Long>(counter1.keySet());
                 ls.addAll(counter2.keySet());
                 for (long t : ls) {
-                    if (counter1.containsKey(t)) {
-                        prev1 += counter1.get(t);
+                    Double v1 = counter1.get(t);
+                    Double v2 = counter2.get(t);
+                    if (v1 != null) {
+                        prev1 += v1;
                     }
-                    if (counter2.containsKey(t)) {
-                        prev2 += counter2.get(t);
+                    if (v2 != null) {
+                        prev2 += v2;
                     }
                     long tm = t * 60;
-                    String key = RaceConfig.prex_ratio + RaceConfig.team_code + tm;
+                    String key = MiddlewareRaceConfig.prex_ratio + MiddlewareRaceConfig.team_code + tm;
                     double value = prev2 / prev1;
                     RaceUtils.save(this.LOG, this.tairOperator, key, value);
                 }
@@ -73,8 +75,8 @@ public class RatioCount implements IBasicBolt {
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
-        tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
-                RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
+                MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
     }
 
     @Override

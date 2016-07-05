@@ -1,13 +1,6 @@
 package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
-import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
-import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
-import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
-import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently;
-import com.alibaba.rocketmq.client.exception.MQClientException;
-import com.alibaba.rocketmq.common.consumer.ConsumeFromWhere;
-import com.alibaba.rocketmq.common.message.MessageExt;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -19,8 +12,9 @@ import java.util.*;
  */
 public class Checker {
     public static void main(String[] args) throws Exception {
-        TairOperatorImpl tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
-                RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        System.out.println(System.currentTimeMillis() / 1000 / 60);
+        TairOperatorImpl tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
+                MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         //tairOperator.write("1", 4.3);
         long start_time = tairOperator.getModifyTime("start_flag");
         Map<String, Double> kv = new TreeMap<String, Double>();

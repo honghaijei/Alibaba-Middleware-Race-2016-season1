@@ -1,6 +1,6 @@
 package com.alibaba.middleware.race.Tair;
 
-import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.MiddlewareRaceConfig;
 import com.taobao.tair.ResultCode;
 import com.taobao.tair.impl.DefaultTairManager;
 
@@ -57,8 +57,8 @@ public class TairOperatorImpl {
 
     //天猫的分钟交易额写入tair
     public static void main(String [] args) throws Exception {
-        TairOperatorImpl tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
-                RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        TairOperatorImpl tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
+                MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         //假设这是付款时间
         Long millisTime = System.currentTimeMillis();
         //由于整分时间戳是10位数，所以需要转换成整分时间戳
@@ -66,9 +66,9 @@ public class TairOperatorImpl {
         //假设这一分钟的交易额是100;
         Double money = 100.0;
         //写入tair
-        System.out.println(RaceConfig.prex_tmall + minuteTime);
-        boolean success = tairOperator.write(RaceConfig.prex_tmall + minuteTime, money);
+        System.out.println(MiddlewareRaceConfig.prex_tmall + minuteTime);
+        boolean success = tairOperator.write(MiddlewareRaceConfig.prex_tmall + minuteTime, money);
         System.out.println(success);
-        System.out.println(tairOperator.get(RaceConfig.prex_tmall + minuteTime));
+        System.out.println(tairOperator.get(MiddlewareRaceConfig.prex_tmall + minuteTime));
     }
 }

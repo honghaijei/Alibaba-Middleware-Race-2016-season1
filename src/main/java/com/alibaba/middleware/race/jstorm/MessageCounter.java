@@ -4,18 +4,17 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.IBasicBolt;
-import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import com.alibaba.middleware.race.LRUCache;
-import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.MinuteMap;
+import com.alibaba.middleware.race.MiddlewareRaceConfig;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 
@@ -23,7 +22,7 @@ public class MessageCounter implements IBasicBolt {
     public static Logger LOG = LoggerFactory.getLogger(MessageCounter.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
-    ArrayList<HashMap<Long, Double>> counter;
+    ArrayList<MinuteMap> counter;
 
     LRUCache cache;
     long recvCount = 0;
@@ -39,10 +38,11 @@ public class MessageCounter implements IBasicBolt {
             return;
         }
         //LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
-        double value = counter.get(platform).containsKey(minute) ? counter.get(platform).get(minute) + amount : amount;
+        Double t = counter.get(platform).get(minute);
+        double value = t != null ? t + amount : amount;
         counter.get(platform).put(minute, value);
-        String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
-        String key = platformPrefix + RaceConfig.team_code + (minute * 60);
+        String platformPrefix = platform == 0 ? MiddlewareRaceConfig.prex_taobao : MiddlewareRaceConfig.prex_tmall;
+        String key = platformPrefix + MiddlewareRaceConfig.team_code + (minute * 60);
         cache.set(key, value);
     }
 
@@ -53,11 +53,11 @@ public class MessageCounter implements IBasicBolt {
 
     @Override
     public void prepare(Map map, TopologyContext topologyContext) {
-        counter = new ArrayList<HashMap<Long, Double>>();
-        counter.add(new HashMap<Long, Double>(3000));
-        counter.add(new HashMap<Long, Double>(3000));
-        tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
-                RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        counter = new ArrayList<MinuteMap>();
+        counter.add(new MinuteMap());
+        counter.add(new MinuteMap());
+        tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
+                MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         cache = new LRUCache(10, tairOperator, this.LOG);
     }
 

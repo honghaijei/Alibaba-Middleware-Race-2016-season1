@@ -7,8 +7,7 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 import com.alibaba.jstorm.utils.JStormUtils;
-import com.alibaba.middleware.race.LRUFilter;
-import com.alibaba.middleware.race.RaceConfig;
+import com.alibaba.middleware.race.MiddlewareRaceConfig;
 import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import com.alibaba.middleware.race.model.OrderMessage;
@@ -20,13 +19,13 @@ import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently
 import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.consumer.ConsumeFromWhere;
 import com.alibaba.rocketmq.common.message.MessageExt;
+import com.alibaba.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -52,22 +51,24 @@ public class RaceMessageSpout implements IRichSpout {
     @Override
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
         LOG.info("open spout.");
-        TairOperatorImpl tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
-                RaceConfig.TairGroup, RaceConfig.TairNamespace);
+        TairOperatorImpl tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
+                MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         tairOperator.write("start_flag", 0);
         _rand = new Random();
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.LOCAL ? ((Long)_rand.nextLong()).toString() : RaceConfig.MetaConsumerGroup);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ? MiddlewareRaceConfig.MetaConsumerGroup : MiddlewareRaceConfig.MetaConsumerGroup);
 
-        if (RaceConfig.LOCAL) {
+        if (MiddlewareRaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
-            consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
+            consumer.setNamesrvAddr(MiddlewareRaceConfig.MqNamesrvAddr);
         }
+
         consumer.setConsumeMessageBatchMaxSize(128);
+        consumer.setMessageModel(MessageModel.CLUSTERING);
         messagesQueue = new LinkedBlockingDeque<MessageExt>(50000);
         try {
-            consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
-            consumer.subscribe(RaceConfig.MqTmallTradeTopic, "*");
-            consumer.subscribe(RaceConfig.MqPayTopic, "*");
+            consumer.subscribe(MiddlewareRaceConfig.MqTaobaoTradeTopic, "*");
+            consumer.subscribe(MiddlewareRaceConfig.MqTmallTradeTopic, "*");
+            consumer.subscribe(MiddlewareRaceConfig.MqPayTopic, "*");
 
             consumer.registerMessageListener(new MessageListenerConcurrently() {
 
@@ -80,26 +81,6 @@ public class RaceMessageSpout implements IRichSpout {
                         if (body.length == 2 && body[0] == 0 && body[1] == 0) {
                             continue;
                         }
-                        /*
-                        if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
-                            PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
-                            //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
-                            try {
-                                paymentMessagesQueue.put(paymentMessage);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                        } else {
-                            OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, body);
-                            try {
-                                orderMessage.setBuyerId(msg.getTopic());
-                                orderMessagesQueue.put(orderMessage);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            //LOG.info("get " + orderMessage.toString());
-                        }
-                        */
                         try {
                             messagesQueue.put(msg);
                         } catch (InterruptedException e) {
@@ -130,7 +111,7 @@ public class RaceMessageSpout implements IRichSpout {
             try {
                 MessageExt msg = messagesQueue.poll(5, TimeUnit.SECONDS);
                 if (msg != null) {
-                    if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
+                    if (msg.getTopic().equals(MiddlewareRaceConfig.MqPayTopic)) {
                         PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, msg.getBody());
                         //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
                         _collector.emit("count", new Values(paymentMessage.getOrderId(), -1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
@@ -138,7 +119,7 @@ public class RaceMessageSpout implements IRichSpout {
                         continue;
                     } else {
                         OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, msg.getBody());
-                        int platform = msg.getTopic().equals(RaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
+                        int platform = msg.getTopic().equals(MiddlewareRaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
                         _collector.emit("count", new Values(orderMessage.getOrderId(), platform, -1L, -1.0));
                     }
                     continue;
