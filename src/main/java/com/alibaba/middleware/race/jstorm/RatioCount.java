@@ -9,14 +9,13 @@ import com.alibaba.middleware.race.LRUCache;
 import com.alibaba.middleware.race.RaceConfig;
 import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
-import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class WordCount implements IRichBolt {
-    private static Logger LOG = LoggerFactory.getLogger(WordCount.class);
+public class RatioCount implements IRichBolt {
+    private static Logger LOG = LoggerFactory.getLogger(RatioCount.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
     TreeMap<Long, Double> counter1 = new TreeMap<Long, Double>();
@@ -28,10 +27,9 @@ public class WordCount implements IRichBolt {
     public void execute(Tuple tuple) {
 
         int platform = tuple.getInteger(0);
-        long timestamp = tuple.getLong(1);
+        long minute = tuple.getLong(1);
         double amount = tuple.getDouble(2);
 
-        long minute = timestamp / 1000 / 60;
         if (amount < 0) {
             if (dirty) {
                 double prev1 = 0.0, prev2 = 0.0;

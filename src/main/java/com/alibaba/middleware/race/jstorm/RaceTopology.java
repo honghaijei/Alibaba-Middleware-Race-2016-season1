@@ -33,14 +33,14 @@ public class RaceTopology {
         if (RaceConfig.LOCAL && !RaceConfig.LOCAL_CLUSTER) {
             System.setOut(new PrintStream(new FileOutputStream("log_haijie.log")));
         }
-        /*
+
         if (!RaceConfig.LOCAL) {
             ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
                     ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME
             );
             rootLogger.setLevel(Level.toLevel("error"));
         }
-        */
+
         LOG.trace("test trace");
         LOG.debug("test debug");
         LOG.info("test info.");
@@ -53,17 +53,14 @@ public class RaceTopology {
             cluster = new LocalCluster();
             //conf.put(Config.TOPOLOGY_MAX_TASK_PARALLELISM, 1);
         }
-        int spout_Parallelism_hint = 1;
-        int split_Parallelism_hint = 4;
-        int count_Parallelism_hint = 1;
 
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setSpout("spout", new RaceSentenceSpout(), spout_Parallelism_hint);
-        builder.setBolt("split", new SplitSentence(), split_Parallelism_hint).fieldsGrouping("spout", "count", new Fields("platform"));
-        builder.setBolt("count", new WordCount(), count_Parallelism_hint).shuffleGrouping("spout", "ratio");
+        builder.setSpout("spout", new RaceMessageSpout(), 1);
+        builder.setBolt("classify", new ClassifyPlatform(), 3).fieldsGrouping("spout", "count", new Fields("orderId"));
+        builder.setBolt("split", new MessageCounter(), 2).fieldsGrouping("classify", new Fields("platform"));
+        builder.setBolt("count", new RatioCount(), 1).shuffleGrouping("spout", "ratio");
         String topologyName = RaceConfig.JstormTopologyName;
-
         try {
             if (RaceConfig.LOCAL && !RaceConfig.LOCAL_CLUSTER) {
                 cluster.submitTopology("SequenceTest", conf, builder.createTopology());

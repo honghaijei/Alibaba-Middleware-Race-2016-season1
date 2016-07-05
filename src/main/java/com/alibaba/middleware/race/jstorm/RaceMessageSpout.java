@@ -29,8 +29,8 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
-public class RaceSentenceSpout implements IRichSpout {
-    private static Logger LOG = LoggerFactory.getLogger(RaceSentenceSpout.class);
+public class RaceMessageSpout implements IRichSpout {
+    private static Logger LOG = LoggerFactory.getLogger(RaceMessageSpout.class);
     SpoutOutputCollector _collector;
     Random _rand;
     long sendingCount;
@@ -38,6 +38,7 @@ public class RaceSentenceSpout implements IRichSpout {
     boolean isStatEnable;
     int sendNumPerNexttuple;
     LinkedBlockingDeque<PaymentMessage> paymentMessagesQueue;
+    LinkedBlockingDeque<OrderMessage> orderMessagesQueue;
     ConcurrentHashMap<Long, Boolean> isTaobaoOrder;
     LRUFilter done;
     long recvCount = 0;
@@ -48,34 +49,7 @@ public class RaceSentenceSpout implements IRichSpout {
             "one two three four five six seven eight nine ten",
             "this is a test of the emergency broadcast system this is only a test",
             "peter piper picked a peck of pickeled peppers"};
-    public class PaymentMessageKey {
 
-        private final long x;
-        private final long y;
-        private final double z;
-
-        public PaymentMessageKey(long x, long y, double z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof PaymentMessageKey)) return false;
-            PaymentMessageKey key = (PaymentMessageKey) o;
-            return x == key.x && y == key.y && z == key.z;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = ((Long)x).hashCode() * 137 + ((Long)y).hashCode();
-            result = result * 137 + ((Double)z).hashCode();
-            return result;
-        }
-
-    }
     @Override
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
         LOG.info("open spout.");
@@ -85,12 +59,12 @@ public class RaceSentenceSpout implements IRichSpout {
         _rand = new Random();
         DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(RaceConfig.LOCAL ? ((Long)_rand.nextLong()).toString() : RaceConfig.MetaConsumerGroup);
 
-        //�ڱ��ش��broker��,�ǵ�ָ��nameServer�ĵ�ַ
         if (RaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
             consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
         }
-        paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(100000000);
+        paymentMessagesQueue = new LinkedBlockingDeque<PaymentMessage>(200000);
+        orderMessagesQueue = new LinkedBlockingDeque<OrderMessage>(200000);
         isTaobaoOrder = new ConcurrentHashMap<Long, Boolean>();
         done = new LRUFilter(10000);
         try {
@@ -113,23 +87,19 @@ public class RaceSentenceSpout implements IRichSpout {
                             PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, body);
                             //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
                             try {
-                                String str = msg.toString();
                                 paymentMessagesQueue.put(paymentMessage);
-
-
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
                         } else {
                             OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, body);
-                            //LOG.info("get " + orderMessage.toString());
-                            if (msg.getTopic().equals(RaceConfig.MqTaobaoTradeTopic)) {
-                                isTaobaoOrder.put(orderMessage.getOrderId(), true);
-                                //LOG.info(orderMessage.getOrderId() + " is taobao id." + ", count="+(recvCount++));
-                            } else {
-                                isTaobaoOrder.put(orderMessage.getOrderId(), false);
-                                //LOG.info(orderMessage.getOrderId() + " is tmall id." + ", count="+(recvCount++));
+                            try {
+                                orderMessage.setBuyerId(msg.getTopic());
+                                orderMessagesQueue.put(orderMessage);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
                             }
+                            //LOG.info("get " + orderMessage.toString());
                         }
                     }
                     return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
@@ -151,44 +121,45 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 100000;
+        int n = 10000;
         while (--n >= 0) {
-            if (!paymentMessagesQueue.isEmpty()) {
-                PaymentMessage paymentMessage = null;
+
+            if (!orderMessagesQueue.isEmpty()) {
+                OrderMessage orderMessages = null;
                 try {
-                    paymentMessage = paymentMessagesQueue.take();
+                    orderMessages = orderMessagesQueue.take();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                Boolean isTaobao = isTaobaoOrder.get(paymentMessage.getOrderId());
-                if (isTaobao == null) {
-                    try {
-                        paymentMessagesQueue.put(paymentMessage);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    String str = paymentMessage.toString();
-                    _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime(), paymentMessage.getPayAmount()));
-                    _collector.emit("count", new Values(isTaobao ? 0 : 1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
-
-                    //LOG.info("shoot " + paymentMessage.toString() + " to " + (isTaobao ? "taobao" : "tmall") + ", count=" + (shootCount++));
-                }
-            } else {
-                if (System.currentTimeMillis() - lastEndSignal > 30000) {
-                    _collector.emit("count", new Values((int) 0, (long) _rand.nextLong(), (double) -1.0));
-                    _collector.emit("count", new Values((int) 1, (long) _rand.nextLong(), (double) -1.0));
-                    _collector.emit("ratio", new Values((int) 0, (long) _rand.nextLong(), (double) -1.0));
-                    _collector.emit("ratio", new Values((int) 1, (long) _rand.nextLong(), (double) -1.0));
-                    LOG.error("shoot end signal.");
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    lastEndSignal = System.currentTimeMillis();
-                }
+                int platform = orderMessages.getBuyerId().equals(RaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
+                _collector.emit("count", new Values(orderMessages.getOrderId(), platform, -1L, -1.0));
+                continue;
             }
+            if (!paymentMessagesQueue.isEmpty()) {
+                PaymentMessage paymentMessages = null;
+                try {
+                    paymentMessages = paymentMessagesQueue.take();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                _collector.emit("count", new Values(paymentMessages.getOrderId(), -1, paymentMessages.getCreateTime() / 1000 / 60, paymentMessages.getPayAmount()));
+                _collector.emit("ratio", new Values((int)paymentMessages.getPayPlatform(), paymentMessages.getCreateTime() / 1000 / 60, paymentMessages.getPayAmount()));
+                continue;
+            }
+            if (System.currentTimeMillis() - lastEndSignal > 30000) {
+                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0));
+                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0));
+                _collector.emit("ratio", new Values((int) 0,  _rand.nextLong(),  -1.0));
+                _collector.emit("ratio", new Values((int) 1,  _rand.nextLong(),  -1.0));
+                LOG.error("shoot end signal.");
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                lastEndSignal = System.currentTimeMillis();
+            }
+
 
             //String sentence = CHOICES[_rand.nextInt(CHOICES.length)];
             //_collector.emit(new Values(sentence));
@@ -209,23 +180,10 @@ public class RaceSentenceSpout implements IRichSpout {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         //declarer.declare(new Fields("platform", "timestamp", "amount"));
-        declarer.declareStream("count", new Fields("platform", "minute", "amount"));
-        declarer.declareStream("ratio", new Fields("platform", "timestamp", "amount"));
+        declarer.declareStream("count", new Fields("orderId", "platform", "minute", "amount"));
+        declarer.declareStream("ratio", new Fields("platform", "minute", "amount"));
     }
 
-    private void updateSendTps() {
-        if (!isStatEnable)
-            return;
-
-        sendingCount++;
-        long now = System.currentTimeMillis();
-        long interval = now - startTime;
-        if (interval > 60 * 1000) {
-            LOG.info("Sending tps of last one minute is " + (sendingCount * sendNumPerNexttuple * 1000) / interval);
-            startTime = now;
-            sendingCount = 0;
-        }
-    }
 
     @Override
     public void close() {

@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
-import com.alibaba.middleware.race.jstorm.SplitSentence;
 import org.slf4j.Logger;
 
 import java.util.*;

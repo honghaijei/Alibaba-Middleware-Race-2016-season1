@@ -6,10 +6,8 @@ import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
 import com.alibaba.middleware.race.LRUCache;
 import com.alibaba.middleware.race.RaceConfig;
-import com.alibaba.middleware.race.RaceUtils;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class SplitSentence implements IRichBolt {
-    public static Logger LOG = LoggerFactory.getLogger(SplitSentence.class);
+public class MessageCounter implements IRichBolt {
+    public static Logger LOG = LoggerFactory.getLogger(MessageCounter.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
     ArrayList<HashMap<Long, Double>> counter;
