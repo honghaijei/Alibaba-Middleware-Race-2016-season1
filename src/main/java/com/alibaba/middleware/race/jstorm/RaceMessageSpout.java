@@ -41,6 +41,7 @@ public class RaceMessageSpout implements IRichSpout {
     LinkedBlockingDeque<MessageExt> messagesQueue;
     long recvCount = 0;
     long shootCount = 0;
+    boolean timelimitExceed = false;
     long lastEndSignal = System.currentTimeMillis();
     private static final String[] CHOICES = {"marry had a little lamb whos fleese was white as snow",
             "and every where that marry went the lamb was sure to go",
@@ -61,7 +62,7 @@ public class RaceMessageSpout implements IRichSpout {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
             consumer.setNamesrvAddr(RaceConfig.MqNamesrvAddr);
         }
-        consumer.setConsumeMessageBatchMaxSize(32);
+        consumer.setConsumeMessageBatchMaxSize(128);
         messagesQueue = new LinkedBlockingDeque<MessageExt>(50000);
         try {
             consumer.subscribe(RaceConfig.MqTaobaoTradeTopic, "*");
@@ -124,10 +125,10 @@ public class RaceMessageSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 1000;
+        int n = 1;
         while (--n >= 0) {
             try {
-                MessageExt msg = messagesQueue.poll(2, TimeUnit.SECONDS);
+                MessageExt msg = messagesQueue.poll(5, TimeUnit.SECONDS);
                 if (msg != null) {
                     if (msg.getTopic().equals(RaceConfig.MqPayTopic)) {
                         PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, msg.getBody());
@@ -144,6 +145,15 @@ public class RaceMessageSpout implements IRichSpout {
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            }
+            if (System.currentTimeMillis() - startTime > 18 * 60000 && !timelimitExceed) {
+                timelimitExceed = true;
+                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0));
+                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0));
+                _collector.emit("ratio", new Values((int) 0,  _rand.nextLong(),  -1.0));
+                _collector.emit("ratio", new Values((int) 1,  _rand.nextLong(),  -1.0));
+                LOG.error("shoot end signal.");
+                lastEndSignal = System.currentTimeMillis();
             }
             if (System.currentTimeMillis() - lastEndSignal > 30000) {
                 _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0));

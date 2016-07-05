@@ -2,6 +2,8 @@ package com.alibaba.middleware.race.jstorm;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
+import backtype.storm.topology.BasicOutputCollector;
+import backtype.storm.topology.IBasicBolt;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
@@ -24,14 +26,13 @@ import java.util.Map;
  */
 
 
-public class ClassifyPlatform implements IRichBolt {
-    OutputCollector collector;
+public class ClassifyPlatform implements IBasicBolt {
     private static Logger LOG = LoggerFactory.getLogger(ClassifyPlatform.class);
     Map<Long, Integer> orderType = new HashMap<Long, Integer>(50000);
     Map<Long, List<Tuple>> paymentCache = new HashMap<Long, List<Tuple>>(50000);
 
     @Override
-    public void execute(Tuple tuple) {
+    public void execute(Tuple tuple, BasicOutputCollector basicOutputCollector) {
 
         long orderId = tuple.getLong(0);
         int platform = tuple.getInteger(1);
@@ -43,7 +44,7 @@ public class ClassifyPlatform implements IRichBolt {
             List<Tuple> left = paymentCache.get(orderId);
             if (left != null) {
                 for (Tuple e : left) {
-                    collector.emit(new Values(platform, e.getLong(2), e.getDouble(3)));
+                    basicOutputCollector.emit(new Values(platform, e.getLong(2), e.getDouble(3)));
                 }
                 left.clear();
             }
@@ -59,7 +60,7 @@ public class ClassifyPlatform implements IRichBolt {
                     left.add(tuple);
                 }
             } else {
-                collector.emit(new Values((int)type, minute, amount));
+                basicOutputCollector.emit(new Values((int)type, minute, amount));
             }
         }
 
@@ -71,8 +72,7 @@ public class ClassifyPlatform implements IRichBolt {
     }
 
     @Override
-    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-        this.collector = collector;
+    public void prepare(Map stormConf, TopologyContext context) {
         orderType.put(-1L, 0);
         orderType.put(-2L, 1);
     }

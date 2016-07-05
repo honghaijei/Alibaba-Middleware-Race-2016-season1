@@ -2,6 +2,8 @@ package com.alibaba.middleware.race.jstorm;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
+import backtype.storm.topology.BasicOutputCollector;
+import backtype.storm.topology.IBasicBolt;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
@@ -17,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class MessageCounter implements IRichBolt {
+public class MessageCounter implements IBasicBolt {
     public static Logger LOG = LoggerFactory.getLogger(MessageCounter.class);
     OutputCollector collector;
     TairOperatorImpl tairOperator;
@@ -26,9 +28,8 @@ public class MessageCounter implements IRichBolt {
     LRUCache cache;
     long recvCount = 0;
 
-
     @Override
-    public void execute(Tuple tuple) {
+    public void execute(Tuple tuple, BasicOutputCollector basicOutputCollector) {
         int platform = tuple.getInteger(0);
         long minute = tuple.getLong(1);
         double amount = tuple.getDouble(2);
@@ -43,10 +44,6 @@ public class MessageCounter implements IRichBolt {
         String platformPrefix = platform == 0 ? RaceConfig.prex_taobao : RaceConfig.prex_tmall;
         String key = platformPrefix + RaceConfig.team_code + (minute * 60);
         cache.set(key, value);
-        //this.save(tairOperator, key, value);
-
-        //LOG.info(String.format("put payment to cache, platform: %d, minute: %d, amount: %f, cache size: %d", platform, minute, value, cache.size()));
-
     }
 
     @Override
@@ -55,8 +52,7 @@ public class MessageCounter implements IRichBolt {
     }
 
     @Override
-    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-        this.collector = collector;
+    public void prepare(Map map, TopologyContext topologyContext) {
         counter = new ArrayList<HashMap<Long, Double>>();
         counter.add(new HashMap<Long, Double>(3000));
         counter.add(new HashMap<Long, Double>(3000));
@@ -64,6 +60,8 @@ public class MessageCounter implements IRichBolt {
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
         cache = new LRUCache(10, tairOperator, this.LOG);
     }
+
+
 
     @Override
     public void cleanup() {

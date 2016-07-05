@@ -20,37 +20,30 @@ public class LRUCache extends LinkedHashMap<String, Double> {
     }
 
     protected boolean removeEldestEntry(Map.Entry<String, Double> entry) {
-        synchronized (this) {
-            boolean res = this.size() > capacity;
-            if (res) {
-                RaceUtils.save(LOG, tairOperator, entry.getKey(), entry.getValue());
-            }
-            return res;
+        boolean res = this.size() > capacity;
+        if (res) {
+            RaceUtils.save(LOG, tairOperator, entry.getKey(), entry.getValue());
         }
+        return res;
+
     }
 
     public double get(String key) {
-        synchronized (this) {
-            if (this.containsKey(key)) {
-                return super.get(key);
-            } else {
-                return -1;
-            }
+        if (this.containsKey(key)) {
+            return super.get(key);
+        } else {
+            return -1;
         }
     }
 
     public void set(String key, double value) {
-        synchronized (this) {
-            super.put(key, value);
-        }
+        super.put(key, value);
     }
 
     public void force() {
-        synchronized (this) {
-            for (Map.Entry<String, Double> e : this.entrySet()) {
-                RaceUtils.save(this.LOG, tairOperator, e.getKey(), e.getValue());
-            }
-            this.clear();
+        for (Map.Entry<String, Double> e : this.entrySet()) {
+            RaceUtils.save(this.LOG, tairOperator, e.getKey(), e.getValue());
         }
+        this.clear();
     }
 }

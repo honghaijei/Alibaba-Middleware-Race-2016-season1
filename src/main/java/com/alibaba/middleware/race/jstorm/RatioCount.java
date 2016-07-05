@@ -2,6 +2,8 @@ package com.alibaba.middleware.race.jstorm;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
+import backtype.storm.topology.BasicOutputCollector;
+import backtype.storm.topology.IBasicBolt;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Tuple;
@@ -14,17 +16,15 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class RatioCount implements IRichBolt {
+public class RatioCount implements IBasicBolt {
     private static Logger LOG = LoggerFactory.getLogger(RatioCount.class);
-    OutputCollector collector;
     TairOperatorImpl tairOperator;
     Map<Long, Double> counter1 = new HashMap<Long, Double>(3000);
     Map<Long, Double> counter2 = new HashMap<Long, Double>(3000);
-    LRUCache cache;
     int count;
     boolean dirty = false;
     @Override
-    public void execute(Tuple tuple) {
+    public void execute(Tuple tuple, BasicOutputCollector basicOutputCollector) {
 
         int platform = tuple.getInteger(0);
         long minute = tuple.getLong(1);
@@ -64,47 +64,6 @@ public class RatioCount implements IRichBolt {
             counter2.put(minute, prev);
         }
 
-/*
-        if (amount < 0) {
-            LOG.info("get end signal, force all cache to tair.");
-            cache.force();
-            return;
-        }
-        long minute = timestamp / 1000 / 60;
-        if (platform == 0) {
-            Map.Entry<Long, Double> entry = counter1.floorEntry(minute);
-            double prev = entry == null ? 0.0 : entry.getValue();
-            prev += amount;
-            counter1.put(minute, prev);
-            for (Map.Entry<Long, Double> t : new ArrayList<Map.Entry<Long, Double>>(counter1.tailMap(minute, false).entrySet())) {
-                prev = t.getValue() + amount;
-                counter1.put(t.getKey(), prev);
-            }
-
-        } else {
-            Map.Entry<Long, Double> entry = counter2.floorEntry(minute);
-            double prev = entry == null ? 0.0 : entry.getValue();
-            prev += amount;
-            counter2.put(minute, prev);
-            for (Map.Entry<Long, Double> t : new ArrayList<Map.Entry<Long, Double>>(counter2.tailMap(minute, false).entrySet())) {
-                prev = t.getValue() + amount;
-                counter2.put(t.getKey(), prev);
-            }
-        }
-        TreeSet<Long> ls = new TreeSet<Long>(counter1.tailMap(minute).keySet());
-        ls.addAll(counter2.tailMap(minute).keySet());
-        for (long t : ls) {
-            Map.Entry<Long, Double> entry1 = counter1.floorEntry(t);
-            Map.Entry<Long, Double> entry2 = counter2.floorEntry(t);
-            double r1 = entry1 == null ? 0.0 : entry1.getValue();
-            double r2 = entry2 == null ? 0.0 : entry2.getValue();
-            long tm = t * 60;
-            String key = RaceConfig.prex_ratio + RaceConfig.team_code + tm;
-            double value = r2 / r1;
-            cache.set(key, value);
-        }
-*/
-
     }
 
     @Override
@@ -113,11 +72,9 @@ public class RatioCount implements IRichBolt {
     }
 
     @Override
-    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-        this.collector = collector;
+    public void prepare(Map stormConf, TopologyContext context) {
         tairOperator = new TairOperatorImpl(RaceConfig.TairConfigServer, RaceConfig.TairSalveConfigServer,
                 RaceConfig.TairGroup, RaceConfig.TairNamespace);
-        cache = new LRUCache(5, tairOperator, this.LOG);
     }
 
     @Override
