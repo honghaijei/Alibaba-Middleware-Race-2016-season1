@@ -52,21 +52,23 @@ public class RaceTopology {
         if (MiddlewareRaceConfig.LOCAL_CLUSTER || !MiddlewareRaceConfig.LOCAL) {
             conf.setNumWorkers(4);
         }
-        /*
+
         conf.put(Config.TOPOLOGY_RECEIVER_BUFFER_SIZE, 8);
         conf.put(Config.TOPOLOGY_TRANSFER_BUFFER_SIZE, 32);
         conf.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE, 16384);
         conf.put(Config.TOPOLOGY_EXECUTOR_SEND_BUFFER_SIZE, 16384);
-*/
+
 //        conf.put("storm.messaging.netty.transfer.async.batch", true);
         conf.put(Config.STORM_NETTY_MESSAGE_BATCH_SIZE, 262144);
         Config.setNumAckers(conf, 0);
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setSpout("spout", new RaceMessageSpout(), 4);
-        builder.setBolt("classify", new ClassifyPlatform(), 4).fieldsGrouping("spout", "count", new Fields("orderId"));
-        builder.setBolt("split", new MessageCounter(), 2).fieldsGrouping("classify", new Fields("platform"));
-        builder.setBolt("count", new RatioCount(), 1).shuffleGrouping("spout", "ratio");
+        builder.setSpout("spout", new RaceMessagePollSpout(), 4);
+        builder.setBolt("classify", new ClassifyPlatform(), 4).fieldsGrouping("spout", new Fields("orderId"));
+        builder.setBolt("minute_counter", new MessageCounter(), 2).fieldsGrouping("classify", "count", new Fields("platform"));
+        builder.setBolt("ratio_counter", new RatioCounter(), 1).shuffleGrouping("classify", "ratio");
+        TairWriter tairWriter = new TairWriter();
+        builder.setBolt("tair_writer", tairWriter, 1).shuffleGrouping("minute_counter").shuffleGrouping("ratio_counter");
         String topologyName = MiddlewareRaceConfig.JstormTopologyName;
         try {
             if (MiddlewareRaceConfig.LOCAL && !MiddlewareRaceConfig.LOCAL_CLUSTER) {

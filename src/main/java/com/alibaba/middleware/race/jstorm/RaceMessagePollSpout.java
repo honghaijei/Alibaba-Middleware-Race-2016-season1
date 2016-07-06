@@ -29,8 +29,8 @@ import java.util.Random;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-public class RaceMessageSpout implements IRichSpout {
-    private static Logger LOG = LoggerFactory.getLogger(RaceMessageSpout.class);
+public class RaceMessagePollSpout implements IRichSpout {
+    private static Logger LOG = LoggerFactory.getLogger(RaceMessagePollSpout.class);
     SpoutOutputCollector _collector;
     Random _rand;
     long sendingCount;
@@ -55,7 +55,7 @@ public class RaceMessageSpout implements IRichSpout {
                 MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         tairOperator.write("start_flag", 0);
         _rand = new Random();
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ? MiddlewareRaceConfig.MetaConsumerGroup : MiddlewareRaceConfig.MetaConsumerGroup);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"789" : MiddlewareRaceConfig.MetaConsumerGroup);
 
         if (MiddlewareRaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
@@ -113,13 +113,12 @@ public class RaceMessageSpout implements IRichSpout {
                     if (msg.getTopic().equals(MiddlewareRaceConfig.MqPayTopic)) {
                         PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, msg.getBody());
                         //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
-                        _collector.emit("count", new Values(paymentMessage.getOrderId(), -1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()), msg.getMsgId());
-                        _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
+                        _collector.emit(new Values(paymentMessage.getOrderId(), -1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount(), msg.getMsgId(), (int)paymentMessage.getPayPlatform()));
                         continue;
                     } else {
                         OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, msg.getBody());
                         int platform = msg.getTopic().equals(MiddlewareRaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
-                        _collector.emit("count", new Values(orderMessage.getOrderId(), platform, -1L, -1.0, ""));
+                        _collector.emit(new Values(orderMessage.getOrderId(), platform, -1L, -1.0, "", -1));
                     }
                     continue;
                 }
@@ -128,18 +127,14 @@ public class RaceMessageSpout implements IRichSpout {
             }
             if (System.currentTimeMillis() - startTime > 18 * 60000 && !timelimitExceed) {
                 timelimitExceed = true;
-                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0, ""));
-                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0, ""));
-                _collector.emit("ratio", new Values((int) 0,  _rand.nextLong(),  -1.0));
-                _collector.emit("ratio", new Values((int) 1,  _rand.nextLong(),  -1.0));
+                _collector.emit( new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));
+                _collector.emit( new Values(-2L, -1, _rand.nextLong(),  -1.0, "", -1));
                 LOG.error("shoot end signal.");
                 lastEndSignal = System.currentTimeMillis();
             }
             if (System.currentTimeMillis() - lastEndSignal > 30000) {
-                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0, ""));
-                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0, ""));
-                _collector.emit("ratio", new Values((int) 0,  _rand.nextLong(),  -1.0));
-                _collector.emit("ratio", new Values((int) 1,  _rand.nextLong(),  -1.0));
+                _collector.emit(new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));
+                _collector.emit(new Values(-2L, -1, _rand.nextLong(),  -1.0, "", -1));
                 LOG.error("shoot end signal.");
                 try {
                     Thread.sleep(100);
@@ -169,8 +164,7 @@ public class RaceMessageSpout implements IRichSpout {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         //declarer.declare(new Fields("platform", "timestamp", "amount"));
-        declarer.declareStream("count", new Fields("orderId", "platform", "minute", "amount", "messageId"));
-        declarer.declareStream("ratio", new Fields("platform", "minute", "amount"));
+        declarer.declare(new Fields("orderId", "platform", "minute", "amount", "messageId", "type"));
     }
 
 

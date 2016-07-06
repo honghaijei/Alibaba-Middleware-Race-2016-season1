@@ -1,5 +1,6 @@
 package com.alibaba.middleware.race;
 
+import backtype.storm.topology.BasicOutputCollector;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import org.slf4j.Logger;
 
@@ -8,21 +9,18 @@ import java.util.*;
 /**
  * Created by hahong on 2016/7/2.
  */
-public class LRUCache extends LinkedHashMap<String, Double> {
+public class TairLRUCache extends LinkedHashMap<String, Double> {
     private int capacity;
-    private TairOperatorImpl tairOperator;
-    private Logger LOG;
-    public LRUCache(int capacity, TairOperatorImpl tairOperator, Logger LOG) {
+    BasicOutputCollector collector;
+    public TairLRUCache(int capacity) {
         super(capacity, 0.75f, true);
         this.capacity = capacity;
-        this.tairOperator = tairOperator;
-        this.LOG = LOG;
     }
 
     protected boolean removeEldestEntry(Map.Entry<String, Double> entry) {
         boolean res = this.size() > capacity;
         if (res) {
-            RaceUtils.save(LOG, tairOperator, entry.getKey(), entry.getValue());
+            collector.emit(new backtype.storm.tuple.Values(entry.getKey(), entry.getValue()));
         }
         return res;
 
@@ -36,13 +34,14 @@ public class LRUCache extends LinkedHashMap<String, Double> {
         }
     }
 
-    public void set(String key, double value) {
+    public void set(String key, double value, BasicOutputCollector basicOutputCollector) {
+        this.collector = basicOutputCollector;
         super.put(key, value);
     }
 
-    public void force() {
+    public void force(BasicOutputCollector basicOutputCollector) {
         for (Map.Entry<String, Double> e : this.entrySet()) {
-            RaceUtils.save(this.LOG, tairOperator, e.getKey(), e.getValue());
+            basicOutputCollector.emit(new backtype.storm.tuple.Values(e.getKey(), e.getValue()));
         }
         this.clear();
     }

@@ -1,31 +1,23 @@
 package com.alibaba.middleware.race.jstorm;
 
-import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.IBasicBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import com.alibaba.middleware.race.LRUCache;
+import com.alibaba.middleware.race.TairLRUCache;
 import com.alibaba.middleware.race.MinuteMap;
 import com.alibaba.middleware.race.MiddlewareRaceConfig;
-import com.alibaba.middleware.race.Tair.TairOperatorImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Map;
 
 
 public class MessageCounter implements IBasicBolt {
-    public static Logger LOG = LoggerFactory.getLogger(MessageCounter.class);
-    OutputCollector collector;
-    TairOperatorImpl tairOperator;
     ArrayList<MinuteMap> counter;
 
-    LRUCache cache;
-    long recvCount = 0;
+    TairLRUCache cache;
 
     @Override
     public void execute(Tuple tuple, BasicOutputCollector basicOutputCollector) {
@@ -34,7 +26,7 @@ public class MessageCounter implements IBasicBolt {
         double amount = tuple.getDouble(2);
         if (amount < 0) {
             //LOG.info("get end signal, force all cache to tair.");
-            cache.force();
+            cache.force(basicOutputCollector);
             return;
         }
         //LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
@@ -43,12 +35,12 @@ public class MessageCounter implements IBasicBolt {
         counter.get(platform).put(minute, value);
         String platformPrefix = platform == 0 ? MiddlewareRaceConfig.prex_taobao : MiddlewareRaceConfig.prex_tmall;
         String key = platformPrefix + MiddlewareRaceConfig.team_code + (minute * 60);
-        cache.set(key, value);
+        cache.set(key, value, basicOutputCollector);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("platform", "minute", "amount"));
+        declarer.declare(new Fields("key", "value"));
     }
 
     @Override
@@ -56,9 +48,7 @@ public class MessageCounter implements IBasicBolt {
         counter = new ArrayList<MinuteMap>();
         counter.add(new MinuteMap());
         counter.add(new MinuteMap());
-        tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
-                MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
-        cache = new LRUCache(10, tairOperator, this.LOG);
+        cache = new TairLRUCache(10);
     }
 
 

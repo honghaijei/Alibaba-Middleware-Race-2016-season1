@@ -11,8 +11,7 @@ import java.util.*;
  * Created by hahong on 2016/7/4.
  */
 public class Checker {
-    public static void main(String[] args) throws Exception {
-        System.out.println(System.currentTimeMillis() / 1000 / 60);
+    public static Map<String, Double> getResult(String filename) {
         TairOperatorImpl tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
                 MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         //tairOperator.write("1", 4.3);
@@ -30,32 +29,18 @@ public class Checker {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("Key value pair size: " + kv.size());
-        double tot = 0.0, accuracy = 0.0;
-        for (String k : kv.keySet()) {
-            System.out.print("key: " + k + "\t");
-            double value = (double)tairOperator.get(k);
-
-            if (Math.abs(value - kv.get(k)) > 0.001) {
-                System.out.print("error.");
-            } else {
-
-                long cost = tairOperator.getModifyTime(k) - start_time;
-                if (cost >= 0) {
-                    tot += cost;
-                    accuracy += 1.0;
-                    System.out.println(String.format("key: %s, expected value: %f, actual value: %f", k, kv.get(k), value));
-                } else {
-                    System.out.println("key not exist.");
-                }
-
-            }
-
-
+        return kv;
+    }
+    public static void main(String[] args) throws Exception {
+        Map<String, Double> r = getResult("3509496lg7-worker-69042.log");
+        Map<String, Double> ans = getResult("3509496lg7-worker-6904.log");
+        Double acc = 0.0;
+        for (String key : ans.keySet()) {
+            if (!r.containsKey(key)) continue;
+            if (Math.abs(r.get(key) - ans.get(key)) > 0.001) continue;
+            acc += 1.0;
         }
-        tot /= kv.size();
-        accuracy /= kv.size();
-        System.out.println("done.");
-        System.out.println(String.format("Accuracy: %f, Time: %f", accuracy, tot));
+        acc /= ans.size();
+        System.out.println("acc is" + acc);
     }
 }

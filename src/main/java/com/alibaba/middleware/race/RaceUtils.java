@@ -1,5 +1,6 @@
 package com.alibaba.middleware.race;
 
+import backtype.storm.topology.BasicOutputCollector;
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -31,18 +32,6 @@ public class RaceUtils {
         input.close();
         T ret = kryo.readObject(input, tClass);
         return ret;
-    }
-    public static void save(Logger LOG, TairOperatorImpl tairOperator, String key, double value) {
-        boolean succ = tairOperator.write(key, value);
-
-        if (MiddlewareRaceConfig.LOCAL) {
-            if (succ) {
-                LOG.info("Write to tair success, " + key + "\t" + value);
-            } else {
-                LOG.error("Write to tair error, " + key + "\t" + value);
-            }
-        }
-
     }
 
 }

@@ -30,6 +30,7 @@ public class ClassifyPlatform implements IBasicBolt {
         long minute = tuple.getLong(2);
         double amount = tuple.getDouble(3);
         String messageId = tuple.getString(4);
+        int payPlatform = tuple.getInteger(5);
         if (messageId != "") {
             if (msgIdset.contains(messageId)) {
                 return;
@@ -37,6 +38,7 @@ public class ClassifyPlatform implements IBasicBolt {
                 msgIdset.add(messageId);
             }
         }
+        basicOutputCollector.emit("ratio", new Values((int)payPlatform, minute, amount));
         //LOG.info(String.format("receive tuple, orderId: %d, platform: %d, minute: %d, amount: %f", orderId, platform, minute, amount));
         if (platform != -1) {
             orderType.put(orderId, platform);
@@ -59,7 +61,7 @@ public class ClassifyPlatform implements IBasicBolt {
                     left.add(tuple);
                 }
             } else {
-                basicOutputCollector.emit(new Values((int)type, minute, amount));
+                basicOutputCollector.emit("count", new Values((int)type, minute, amount));
             }
         }
 
@@ -67,7 +69,8 @@ public class ClassifyPlatform implements IBasicBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("platform", "minute", "amount"));
+        declarer.declareStream("count", new Fields("platform", "minute", "amount"));
+        declarer.declareStream("ratio", new Fields("platform", "minute", "amount"));
     }
 
     @Override
