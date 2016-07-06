@@ -105,7 +105,7 @@ public class RaceMessagePollSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 1;
+        int n = 10;
         while (--n >= 0) {
             try {
                 MessageExt msg = messagesQueue.poll(5, TimeUnit.SECONDS);
@@ -127,14 +127,14 @@ public class RaceMessagePollSpout implements IRichSpout {
             }
             if (System.currentTimeMillis() - startTime > 18 * 60000 && !timelimitExceed) {
                 timelimitExceed = true;
-                _collector.emit( new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));
-                _collector.emit( new Values(-2L, -1, _rand.nextLong(),  -1.0, "", -1));
+                _collector.emit( new Values(-1L, -1, _rand.nextLong(),  -1.0, "", 0));
+                _collector.emit( new Values(-2L, -1, _rand.nextLong(),  -1.0, "", 1));
                 LOG.error("shoot end signal.");
                 lastEndSignal = System.currentTimeMillis();
             }
             if (System.currentTimeMillis() - lastEndSignal > 30000) {
-                _collector.emit(new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));
-                _collector.emit(new Values(-2L, -1, _rand.nextLong(),  -1.0, "", -1));
+                _collector.emit(new Values(-1L, -1, _rand.nextLong(),  -1.0, "", 0));
+                _collector.emit(new Values(-2L, -1, _rand.nextLong(),  -1.0, "", 1));
                 LOG.error("shoot end signal.");
                 try {
                     Thread.sleep(100);

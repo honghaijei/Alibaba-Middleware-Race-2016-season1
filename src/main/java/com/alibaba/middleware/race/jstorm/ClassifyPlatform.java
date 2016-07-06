@@ -38,7 +38,6 @@ public class ClassifyPlatform implements IBasicBolt {
                 msgIdset.add(messageId);
             }
         }
-        basicOutputCollector.emit("ratio", new Values((int)payPlatform, minute, amount));
         //LOG.info(String.format("receive tuple, orderId: %d, platform: %d, minute: %d, amount: %f", orderId, platform, minute, amount));
         if (platform != -1) {
             orderType.put(orderId, platform);
@@ -50,6 +49,7 @@ public class ClassifyPlatform implements IBasicBolt {
                 left.clear();
             }
         } else {
+            basicOutputCollector.emit("ratio", new Values((int)payPlatform, minute, amount));
             Integer type = orderType.get(orderId);
             if (type == null) {
                 List<Tuple> left = paymentCache.get(orderId);
