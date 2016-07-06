@@ -10,10 +10,7 @@ import backtype.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by hahong on 2016/7/3.
@@ -24,7 +21,7 @@ public class ClassifyPlatform implements IBasicBolt {
     private static Logger LOG = LoggerFactory.getLogger(ClassifyPlatform.class);
     Map<Long, Integer> orderType = new HashMap<Long, Integer>(100000);
     Map<Long, List<Tuple>> paymentCache = new HashMap<Long, List<Tuple>>(100000);
-
+    Set<String> msgIdset = new HashSet<String>();
     @Override
     public void execute(Tuple tuple, BasicOutputCollector basicOutputCollector) {
 
@@ -32,6 +29,14 @@ public class ClassifyPlatform implements IBasicBolt {
         int platform = tuple.getInteger(1);
         long minute = tuple.getLong(2);
         double amount = tuple.getDouble(3);
+        String messageId = tuple.getString(4);
+        if (messageId != "") {
+            if (msgIdset.contains(messageId)) {
+                return;
+            } else {
+                msgIdset.add(messageId);
+            }
+        }
         //LOG.info(String.format("receive tuple, orderId: %d, platform: %d, minute: %d, amount: %f", orderId, platform, minute, amount));
         if (platform != -1) {
             orderType.put(orderId, platform);

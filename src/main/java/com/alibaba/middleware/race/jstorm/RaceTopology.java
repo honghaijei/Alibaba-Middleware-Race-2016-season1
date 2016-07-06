@@ -64,7 +64,7 @@ public class RaceTopology {
         TopologyBuilder builder = new TopologyBuilder();
 
         builder.setSpout("spout", new RaceMessageSpout(), 4);
-        builder.setBolt("classify", new ClassifyPlatform(), 2).fieldsGrouping("spout", "count", new Fields("orderId"));
+        builder.setBolt("classify", new ClassifyPlatform(), 4).fieldsGrouping("spout", "count", new Fields("orderId"));
         builder.setBolt("split", new MessageCounter(), 2).fieldsGrouping("classify", new Fields("platform"));
         builder.setBolt("count", new RatioCount(), 1).shuffleGrouping("spout", "ratio");
         String topologyName = MiddlewareRaceConfig.JstormTopologyName;

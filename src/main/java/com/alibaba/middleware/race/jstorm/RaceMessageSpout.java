@@ -76,7 +76,6 @@ public class RaceMessageSpout implements IRichSpout {
                 public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
                                                                 ConsumeConcurrentlyContext context) {
                     for (MessageExt msg : msgs) {
-
                         byte[] body = msg.getBody();
                         if (body.length == 2 && body[0] == 0 && body[1] == 0) {
                             continue;
@@ -114,13 +113,13 @@ public class RaceMessageSpout implements IRichSpout {
                     if (msg.getTopic().equals(MiddlewareRaceConfig.MqPayTopic)) {
                         PaymentMessage paymentMessage = RaceUtils.readKryoObject(PaymentMessage.class, msg.getBody());
                         //LOG.info("get " + paymentMessage.toString() + ", count="+(recvCount++));
-                        _collector.emit("count", new Values(paymentMessage.getOrderId(), -1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
+                        _collector.emit("count", new Values(paymentMessage.getOrderId(), -1, paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()), msg.getMsgId());
                         _collector.emit("ratio", new Values((int) paymentMessage.getPayPlatform(), paymentMessage.getCreateTime() / 1000 / 60, paymentMessage.getPayAmount()));
                         continue;
                     } else {
                         OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, msg.getBody());
                         int platform = msg.getTopic().equals(MiddlewareRaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
-                        _collector.emit("count", new Values(orderMessage.getOrderId(), platform, -1L, -1.0));
+                        _collector.emit("count", new Values(orderMessage.getOrderId(), platform, -1L, -1.0, ""));
                     }
                     continue;
                 }
@@ -129,16 +128,16 @@ public class RaceMessageSpout implements IRichSpout {
             }
             if (System.currentTimeMillis() - startTime > 18 * 60000 && !timelimitExceed) {
                 timelimitExceed = true;
-                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0));
-                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0));
+                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0, ""));
+                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0, ""));
                 _collector.emit("ratio", new Values((int) 0,  _rand.nextLong(),  -1.0));
                 _collector.emit("ratio", new Values((int) 1,  _rand.nextLong(),  -1.0));
                 LOG.error("shoot end signal.");
                 lastEndSignal = System.currentTimeMillis();
             }
             if (System.currentTimeMillis() - lastEndSignal > 30000) {
-                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0));
-                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0));
+                _collector.emit("count", new Values(-1L, -1, _rand.nextLong(),  -1.0, ""));
+                _collector.emit("count", new Values(-2L, -1, _rand.nextLong(),  -1.0, ""));
                 _collector.emit("ratio", new Values((int) 0,  _rand.nextLong(),  -1.0));
                 _collector.emit("ratio", new Values((int) 1,  _rand.nextLong(),  -1.0));
                 LOG.error("shoot end signal.");
@@ -170,7 +169,7 @@ public class RaceMessageSpout implements IRichSpout {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         //declarer.declare(new Fields("platform", "timestamp", "amount"));
-        declarer.declareStream("count", new Fields("orderId", "platform", "minute", "amount"));
+        declarer.declareStream("count", new Fields("orderId", "platform", "minute", "amount", "messageId"));
         declarer.declareStream("ratio", new Fields("platform", "minute", "amount"));
     }
 
