@@ -44,7 +44,7 @@ public class ClassifyPlatform implements IBasicBolt {
             List<Tuple> left = paymentCache.get(orderId);
             if (left != null) {
                 for (Tuple e : left) {
-                    basicOutputCollector.emit(new Values(platform, e.getLong(2), e.getDouble(3)));
+                    basicOutputCollector.emit("count", new Values(platform, e.getLong(2), e.getDouble(3)));
                 }
                 left.clear();
             }

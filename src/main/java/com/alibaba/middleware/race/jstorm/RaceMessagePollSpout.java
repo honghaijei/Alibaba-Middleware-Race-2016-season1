@@ -55,7 +55,7 @@ public class RaceMessagePollSpout implements IRichSpout {
                 MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         tairOperator.write("start_flag", 0);
         _rand = new Random();
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"789" : MiddlewareRaceConfig.MetaConsumerGroup);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"78sadf9" : MiddlewareRaceConfig.MetaConsumerGroup);
 
         if (MiddlewareRaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
