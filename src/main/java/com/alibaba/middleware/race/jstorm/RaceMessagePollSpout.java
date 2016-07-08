@@ -38,7 +38,6 @@ public class RaceMessagePollSpout implements IRichSpout {
     boolean isStatEnable;
     int sendNumPerNexttuple;
     LinkedBlockingDeque<MessageExt> messagesQueue;
-    long recvCount = 0;
     long shootCount = 0;
     boolean timelimitExceed = false;
     long lastEndSignal = System.currentTimeMillis();
@@ -55,16 +54,16 @@ public class RaceMessagePollSpout implements IRichSpout {
                 MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         tairOperator.write("start_flag", 0);
         _rand = new Random();
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"78sadf9" : MiddlewareRaceConfig.MetaConsumerGroup);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"9fiiip9do1a1r" : MiddlewareRaceConfig.MetaConsumerGroup);
 
         if (MiddlewareRaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
             consumer.setNamesrvAddr(MiddlewareRaceConfig.MqNamesrvAddr);
         }
 
-        consumer.setConsumeMessageBatchMaxSize(128);
+        consumer.setConsumeMessageBatchMaxSize(32);
         consumer.setMessageModel(MessageModel.CLUSTERING);
-        messagesQueue = new LinkedBlockingDeque<MessageExt>(50000);
+        messagesQueue = new LinkedBlockingDeque<MessageExt>(500000);
         try {
             consumer.subscribe(MiddlewareRaceConfig.MqTaobaoTradeTopic, "*");
             consumer.subscribe(MiddlewareRaceConfig.MqTmallTradeTopic, "*");
@@ -105,8 +104,15 @@ public class RaceMessagePollSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         //int n = sendNumPerNexttuple;
-        int n = 1;
+
+        int n = 100000;
         while (--n >= 0) {
+            if (++shootCount % 500000 == 0) {
+                _collector.emit(new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));
+                _collector.emit(new Values(-2L, -1, _rand.nextLong(), -1.0, "", -1));
+                LOG.error("shoot end signal.");
+                return;
+            }
             try {
                 MessageExt msg = messagesQueue.poll(5, TimeUnit.SECONDS);
                 if (msg != null) {
@@ -118,19 +124,12 @@ public class RaceMessagePollSpout implements IRichSpout {
                     } else {
                         OrderMessage orderMessage = RaceUtils.readKryoObject(OrderMessage.class, msg.getBody());
                         int platform = msg.getTopic().equals(MiddlewareRaceConfig.MqTaobaoTradeTopic) ? 0 : 1;
-                        _collector.emit(new Values(orderMessage.getOrderId(), platform, -1L, -1.0, "", -1));
+                        _collector.emit(new Values(orderMessage.getOrderId(), platform, -1L, orderMessage.getTotalPrice(), "", -1));
                     }
                     continue;
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }
-            if (System.currentTimeMillis() - startTime > 18 * 60000 && !timelimitExceed) {
-                timelimitExceed = true;
-                _collector.emit( new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));
-                _collector.emit( new Values(-2L, -1, _rand.nextLong(),  -1.0, "", -1));
-                LOG.error("shoot end signal.");
-                lastEndSignal = System.currentTimeMillis();
             }
             if (System.currentTimeMillis() - lastEndSignal > 15000) {
                 _collector.emit(new Values(-1L, -1, _rand.nextLong(),  -1.0, "", -1));

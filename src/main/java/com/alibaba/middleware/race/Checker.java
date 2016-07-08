@@ -1,6 +1,13 @@
 package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.Tair.TairOperatorImpl;
+import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
+import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
+import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
+import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import com.alibaba.rocketmq.client.exception.MQClientException;
+import com.alibaba.rocketmq.common.consumer.ConsumeFromWhere;
+import com.alibaba.rocketmq.common.message.MessageExt;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -11,7 +18,7 @@ import java.util.*;
  * Created by hahong on 2016/7/4.
  */
 public class Checker {
-    public static Map<String, Double> getResult(String filename) {
+    public static void main(String[] args) throws Exception {
         TairOperatorImpl tairOperator = new TairOperatorImpl(MiddlewareRaceConfig.TairConfigServer, MiddlewareRaceConfig.TairSalveConfigServer,
                 MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         //tairOperator.write("1", 4.3);
@@ -29,18 +36,32 @@ public class Checker {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return kv;
-    }
-    public static void main(String[] args) throws Exception {
-        Map<String, Double> r = getResult("3509496lg7-worker-69042.log");
-        Map<String, Double> ans = getResult("3509496lg7-worker-6904.log");
-        Double acc = 0.0;
-        for (String key : ans.keySet()) {
-            if (!r.containsKey(key)) continue;
-            if (Math.abs(r.get(key) - ans.get(key)) > 0.001) continue;
-            acc += 1.0;
+        System.out.println("Key value pair size: " + kv.size());
+        double tot = 0.0, accuracy = 0.0;
+        for (String k : kv.keySet()) {
+            System.out.print("key: " + k + "\t");
+            double value = (double)tairOperator.get(k);
+
+            if (Math.abs(value - kv.get(k)) > 0.005) {
+                System.out.println("error.");
+            } else {
+
+                long cost = tairOperator.getModifyTime(k) - start_time;
+                if (cost >= 0) {
+                    tot += cost;
+                    accuracy += 1.0;
+                    System.out.println(String.format("key: %s, expected value: %f, actual value: %f, time: %f", k, kv.get(k), value, cost * 1.0));
+                } else {
+                    System.out.println("key not exist.");
+                }
+
+            }
+
+
         }
-        acc /= ans.size();
-        System.out.println("acc is" + acc);
+        tot /= kv.size();
+        accuracy /= kv.size();
+        System.out.println("done.");
+        System.out.println(String.format("Accuracy: %f, Time: %f", accuracy, tot));
     }
 }

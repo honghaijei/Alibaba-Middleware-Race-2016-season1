@@ -20,7 +20,7 @@ public class RatioCounter implements IBasicBolt {
     //Map<Long, Double> counter2 = new HashMap<Long, Double>(3000);
     MinuteMap counter1 = new MinuteMap();
     MinuteMap counter2 = new MinuteMap();
-    Map<String, Double> ratio = new HashMap<String, Double>();
+    Map<Long, Double> ratio = new HashMap<Long, Double>();
     int count;
     boolean dirty = false;
     long lastForce = System.currentTimeMillis();
@@ -49,10 +49,10 @@ public class RatioCounter implements IBasicBolt {
                     long tm = t * 60;
                     String key = MiddlewareRaceConfig.prex_ratio + MiddlewareRaceConfig.team_code + tm;
                     double value = prev2 / prev1;
-                    Double r = ratio.get(key);
+                    Double r = ratio.get(tm);
                     if (r == null || Math.abs(r - value) > 0.001) {
                         basicOutputCollector.emit(new Values(key, value));
-                        ratio.put(key, value);
+                        ratio.put(tm, value);
                     }
 
                 }

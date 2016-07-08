@@ -1,4 +1,4 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.model;
 
 import java.io.Serializable;
 

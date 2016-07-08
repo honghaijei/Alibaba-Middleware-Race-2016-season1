@@ -52,14 +52,14 @@ public class RaceTopology {
         if (MiddlewareRaceConfig.LOCAL_CLUSTER || !MiddlewareRaceConfig.LOCAL) {
             conf.setNumWorkers(4);
         }
-
+/*
         conf.put(Config.TOPOLOGY_RECEIVER_BUFFER_SIZE, 8);
-        conf.put(Config.TOPOLOGY_TRANSFER_BUFFER_SIZE, 32);
-        conf.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE, 16384);
-        conf.put(Config.TOPOLOGY_EXECUTOR_SEND_BUFFER_SIZE, 16384);
-
+        conf.put(Config.TOPOLOGY_TRANSFER_BUFFER_SIZE, 64);
+        conf.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE, 64);
+        conf.put(Config.TOPOLOGY_EXECUTOR_SEND_BUFFER_SIZE, 64);
+*/
 //        conf.put("storm.messaging.netty.transfer.async.batch", true);
-        conf.put(Config.STORM_NETTY_MESSAGE_BATCH_SIZE, 262144);
+//        conf.put(Config.STORM_NETTY_MESSAGE_BATCH_SIZE, 262144);
         Config.setNumAckers(conf, 0);
         TopologyBuilder builder = new TopologyBuilder();
 

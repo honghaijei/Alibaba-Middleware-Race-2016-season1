@@ -23,7 +23,7 @@ public class Consumer {
     static int cnt = 0;
     public static void main(String[] args) throws InterruptedException, MQClientException {
 
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("zzz");
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("z489zz");
 
         /**
          * 设置Consumer第一次启动是从队列头部开始消费还是队列尾部开始消费<br>

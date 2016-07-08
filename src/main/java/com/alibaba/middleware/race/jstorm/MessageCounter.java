@@ -16,8 +16,7 @@ import java.util.Map;
 
 public class MessageCounter implements IBasicBolt {
     ArrayList<MinuteMap> counter;
-
-    TairLRUCache cache;
+    ArrayList<TairLRUCache> cache;
 
     @Override
     public void execute(Tuple tuple, BasicOutputCollector basicOutputCollector) {
@@ -26,16 +25,14 @@ public class MessageCounter implements IBasicBolt {
         double amount = tuple.getDouble(2);
         if (amount < 0) {
             //LOG.info("get end signal, force all cache to tair.");
-            cache.force(basicOutputCollector);
+            cache.get(platform).force(basicOutputCollector);
             return;
         }
         //LOG.info(String.format("get a payment message, platform: %d, minute: %d, amount: %f, count=%d", platform, minute, amount, recvCount++));
         Double t = counter.get(platform).get(minute);
         double value = t != null ? t + amount : amount;
         counter.get(platform).put(minute, value);
-        String platformPrefix = platform == 0 ? MiddlewareRaceConfig.prex_taobao : MiddlewareRaceConfig.prex_tmall;
-        String key = platformPrefix + MiddlewareRaceConfig.team_code + (minute * 60);
-        cache.set(key, value, basicOutputCollector);
+        cache.get(platform).set(minute * 60, value, basicOutputCollector);
     }
 
     @Override
@@ -48,7 +45,9 @@ public class MessageCounter implements IBasicBolt {
         counter = new ArrayList<MinuteMap>();
         counter.add(new MinuteMap());
         counter.add(new MinuteMap());
-        cache = new TairLRUCache(10);
+        cache = new ArrayList<TairLRUCache>();
+        cache.add(new TairLRUCache(10, MiddlewareRaceConfig.prex_taobao + MiddlewareRaceConfig.team_code));
+        cache.add(new TairLRUCache(10, MiddlewareRaceConfig.prex_tmall + MiddlewareRaceConfig.team_code));
     }
 
 
