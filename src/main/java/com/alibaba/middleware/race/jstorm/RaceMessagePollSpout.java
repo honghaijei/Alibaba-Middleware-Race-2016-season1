@@ -54,7 +54,7 @@ public class RaceMessagePollSpout implements IRichSpout {
                 MiddlewareRaceConfig.TairGroup, MiddlewareRaceConfig.TairNamespace);
         tairOperator.write("start_flag", 0);
         _rand = new Random();
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"9fiiip9do1a1r" : MiddlewareRaceConfig.MetaConsumerGroup);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(MiddlewareRaceConfig.LOCAL ?"9fiiip9do1oo1r" : MiddlewareRaceConfig.MetaConsumerGroup);
 
         if (MiddlewareRaceConfig.LOCAL) {
             consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
@@ -63,7 +63,9 @@ public class RaceMessagePollSpout implements IRichSpout {
 
         consumer.setConsumeMessageBatchMaxSize(32);
         consumer.setMessageModel(MessageModel.CLUSTERING);
-        messagesQueue = new LinkedBlockingDeque<MessageExt>(500000);
+        consumer.setConsumeThreadMin(100);
+        consumer.setConsumeThreadMax(100);
+        messagesQueue = new LinkedBlockingDeque<MessageExt>(100000);
         try {
             consumer.subscribe(MiddlewareRaceConfig.MqTaobaoTradeTopic, "*");
             consumer.subscribe(MiddlewareRaceConfig.MqTmallTradeTopic, "*");
